@@ -70,11 +70,29 @@ This will:
 1. Download DISC files from FTP (if not already downloaded)
 2. Scrape Jira issues and save to `jira_issues.csv`
 
+### CSV Merge Utility
+
+To merge CSV files from different sources:
+```bash
+python merge_csv.py
+```
+
+This script:
+- Merges `jira_issues.csv` and `WW2613.csv`
+- Selects the common column `summary` from both files
+- Adds a `source` column to identify which file each row came from
+- Outputs to `merged_issues.csv`
+
+The merged file contains:
+- `summary`: The summary/description text (common column)
+- `source`: Either "jira_issues" or "WW2613" to identify the data source
+
 ## File Structure
 
 ```
 .
 ├── ttr_data_processor.py    # Main unified script
+├── merge_csv.py             # CSV merge utility
 ├── DISC_ttr_pulling.py      # Legacy FTP script (deprecated)
 ├── jira_web_access.py       # Legacy Jira script (deprecated)
 ├── WW2612.csv               # Sample CSV data
