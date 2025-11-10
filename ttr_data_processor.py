@@ -33,7 +33,7 @@ FTP_HOST = '10.19.67.204'
 FTP_PATH = '/var/merlin/cfgs/Siyarat/DISC'
 FTP_USERNAME = 'merlin'
 FTP_PASSWORD = 'merlin'
-FTP_LOCAL_DIR = r'D:\i\warachai\MY_RESOURCE\MY_SCRIPT\TTR_Feature_Input\DISC_downloads'
+FTP_LOCAL_DIR = r'D:\work\project\project\Github\TTR_ALL_HERE\RawData'
 
 
 # ==============================================================================
@@ -41,10 +41,10 @@ FTP_LOCAL_DIR = r'D:\i\warachai\MY_RESOURCE\MY_SCRIPT\TTR_Feature_Input\DISC_dow
 # ==============================================================================
 JIRA_BASE_URL = 'https://jira.seagate.com'
 JIRA_API_ENDPOINT = '/jira/rest/api/2/search'
-JIRA_PROJECTS = ['SUMMIT', 'MARLINCT', 'MBP', 'DORADO']
+JIRA_PROJECTS = ['SUMMIT', 'MARLINCT', 'MBP', 'DORADO', 'TSR']
 JIRA_FIELDS = 'key,summary,status,assignee,created,customfield_35600'
 JIRA_MAX_RESULTS = 50
-JIRA_OUTPUT_FILE = r'D:/i/warachai/MY_RESOURCE/MY_SCRIPT/TTR_Feature_Input/jira_issues.csv'
+JIRA_OUTPUT_FILE = r'D:\work\project\project\Github\TTR_ALL_HERE\RawData\jira_issues.csv'
 
 
 # ==============================================================================
@@ -85,7 +85,7 @@ def download_ftp_files(ftp_host=FTP_HOST, ftp_path=FTP_PATH,
         username (str): FTP username (default: 'merlin').
         password (str): FTP password (default: 'merlin').
     """
-    if os.path.exists(local_dir) and os.listdir(local_dir):
+    if os.path.exists(local_dir) :
         print(f"Local directory already exists and is not empty: {local_dir}")
         return
 
@@ -226,7 +226,7 @@ def scrape_jira_issues():
     try:
         # First, load the base domain to set cookies
         print(f"Accessing base domain: {JIRA_BASE_URL}")
-        driver.get(JIRA_BASE_URL)
+        driver.get(JIRA_BASE_URL + '/jira/browse/MARLINCT-2193')
         time.sleep(10)
         
         # Process each project
@@ -262,17 +262,17 @@ def main():
     except Exception as e:
         print(f"Error during FTP download: {e}")
     
-    # Step 2: Scrape Jira issues
-    print("\n[2/2] Scraping Jira issues...")
-    try:
-        scrape_jira_issues()
-        print("Jira scraping completed successfully.")
-    except Exception as e:
-        print(f"Error during Jira scraping: {e}")
+    # # Step 2: Scrape Jira issues
+    # print("\n[2/2] Scraping Jira issues...")
+    # try:
+    #     scrape_jira_issues()
+    #     print("Jira scraping completed successfully.")
+    # except Exception as e:
+    #     print(f"Error during Jira scraping: {e}")
     
-    print("\n" + "=" * 80)
-    print("TTR Data Processor - Completed")
-    print("=" * 80)
+    # print("\n" + "=" * 80)
+    # print("TTR Data Processor - Completed")
+    # print("=" * 80)
 
 
 if __name__ == "__main__":
