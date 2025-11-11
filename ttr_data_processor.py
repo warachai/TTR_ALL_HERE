@@ -42,7 +42,7 @@ FTP_LOCAL_DIR = r'D:\work\project\project\Github\TTR_ALL_HERE\RawData'
 JIRA_BASE_URL = 'https://jira.seagate.com'
 JIRA_API_ENDPOINT = '/jira/rest/api/2/search'
 JIRA_PROJECTS = ['SUMMIT', 'MARLINCT', 'MBP', 'DORADO', 'TSR']
-JIRA_FIELDS = 'key,summary,status,assignee,created,customfield_35600'
+JIRA_FIELDS = 'key,summary,status,reporter,created,customfield_35600'
 JIRA_MAX_RESULTS = 50
 JIRA_OUTPUT_FILE = r'D:\work\project\project\Github\TTR_ALL_HERE\RawData\jira_issues.csv'
 
@@ -61,7 +61,7 @@ CSV_HEADERS = [
     'Project',
     'Key',
     'Status',
-    'Assignee',
+    'Reporter',
     'Created',
     'Summary',
     'Improvement Type'
@@ -85,7 +85,7 @@ def download_ftp_files(ftp_host=FTP_HOST, ftp_path=FTP_PATH,
         username (str): FTP username (default: 'merlin').
         password (str): FTP password (default: 'merlin').
     """
-    if os.path.exists(local_dir) :
+    if not os.path.exists(local_dir) :
         print(f"Local directory already exists and is not empty: {local_dir}")
         return
 
