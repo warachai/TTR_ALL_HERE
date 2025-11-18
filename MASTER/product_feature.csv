@@ -1,0 +1,395 @@
+Program,Task_ID,Task_Name
+MARLIN BP,MBP-1404,FNC2 RRO_SCRN_x removal (pull in)
+MARLIN BP,MBP-1445,TTR: Remove PRE2 prm_282_hiResVCMBodeTemp (pull in)
+MARLIN BP,MBP-1481,T102 PCBA_SCRN TTR (pull in)
+MARLIN BP,MBP-1609,Remove PWT SF3 portion for weld before Cert (pull in)
+MARLIN BP,MBP-1641,TTR: CERT portion Powercycle
+MARLIN BP,MBP-1706,"TTR: T282 reduce ""idle time"""
+MARLIN BP,MBP-1707,TTR: Further Test Time Reduction In T282 - Bode Convergence Check
+MARLIN BP,MBP-1708,TTR - Reducing the SkDly in t135 from 20ms to 0ms
+MARLIN BP,MBP-1352,Enable STFL on SMR
+MARLIN BP,MBP-1224,T299: Disable Track Center Search
+MARLIN BP,MBP-1383,Fast uJog in T299
+MARLIN BP,MBP-1353,Write Process Restructuring: Fix to VBAR Laser Setup
+MARLIN BP,MBP-1419,Test Time: T297 Data Trimming at PRE2
+MARLIN BP,MBP-1419,Test Time: T297 Data Trimming at CAL2
+MARLIN BP,MBP-972,PROZ   (note: PROZ chg is in PCO 5.0.4)
+MARLIN BP,MBP-1444,T282 C0 sensitivity opti
+MARLIN BP,MBP-1525,Erasure Testing - Fast Write Modes (T298/T299)
+MARLIN BP,MBP-1718,TTR: To close TT gap (vs Marlin) - BER measurement
+MARLIN BP,MBP-1739,T282 sensitivity projection optimization - data & test time reduction
+MARLIN BP,MBP-1671,TTR - Radical malloc eval
+MARLIN BP,MBP-1846,LASER_INIT test process optimization
+MARLIN BP,MBP-1625,ZAP Seek Path Optimization
+MARLIN BP,MBP-1602,SPFS T2108 Read TTR by increasing CertTrkStep (SkInc) to 75 from default 30 (CMR only)
+MARLIN BP,MBP-1704,Reduce redundant zones test of VBAR_ATI
+MARLIN BP,MBP-1852,Removal of Offset Search & Channel Training Reads
+MARLIN BP,MBP-1916,WP Optimization
+MARLIN BP,MBP-1926,Optimize get ta rec for TA access and audit lookup
+MARLIN BP,MBP-1774,Add DRAM screen while soaking test
+MARLIN BP,MBP-1792,MarlinBP remove state (est. 43 hrs) ??
+MARLIN BP,MBP-1856,T451 Derived Opti: Update Anchor zone behavior and set anchor zone mask
+MARLIN BP,MBP-1815,FPW & SPFS Power Cycle Removal around LFA
+MARLIN BP,MBP-1884,FPW removal
+MARLIN BP,MBP-1887,FPW removal
+MARLIN BP,Need Jira,POML all mode for SMR
+MARLIN BP,MBP-1731,Scopy TA Scan Feed Forward
+MARLIN BP,MBP-1705,"Project to remove UACT1 ""milli"" actuator"
+MARLIN BP,Need Jira,T285 DRCM opti  (MarlinCT-1948)
+MARLIN BP,Need Jira,WP opti Prediction
+MARLIN BP,Need Jira,XBAR   (MarlinCT-576)
+MARLIN BP,Need Jira,"VBAR ATI predict	 ?(Summit-1179)?		"
+MARLIN BP,Need Jira,Remove PWT opti
+MARLIN BP,Need Jira,VBAR Laser Predition
+MARLIN BP,MBP-,Skip track certify CMR (can we pull in 1 qtr)/ (MarlinCT-1980)
+MARLIN BP,MBP-1730,SMR Format removal (SMR only)
+MARLIN BP,MBP-1909,T55 with independent ZAP track (can we pull in?
+MARLIN BP,need jira,Z-path (5hrs?) (can it pull in before Q3? - Mingzhong
+MARLIN BP,MBP-1931,10k RPM eval at SPIN OPER (Soak Time reduction eval)
+MARLIN BP,MBP-1488,T451 Random Pattern Generation 5% TTR (when?)
+MARLIN BP,MBP-1501,3rev to 2rev ZAP 30TBLV Meta (30 hrs but won't intersect in time for Meta)
+MARLIN BP,MBP-1759,3rev to 2rev ZAP 30TBLV Meta (30 hrs but won't intersect in time for Meta)
+MARLIN BP,MBP-1760,3rev to 2rev ZAP 30TBLV Meta (30 hrs but won't intersect in time for Meta)
+MARLIN BP,MBP-1405,FNC2 T150 Linearization monitor (1.2) (1hr?)
+MARLIN BP,Need Jira,Optimize FPW by Bank write Phase2 (cosider in Marlin rmv state) - (FPW removal instead)
+MARLIN BP,MBP-1013,NDS in parallel with soak (anneal) (9H heads only)
+MARLIN BP,MBP-1403,PRE2 GMR_RES_2x monitor (0.2)
+MARLIN BP,MBP-1236,T461 AC Erase Support
+MARLIN BP,MBP-1307,Reduce drive off time
+MARLIN BP,MBP-1199,Update BPI/TPI FMT via PC file
+MARLIN BP,MARLINCT-1799,Reduce t461 to odd/even zones and reduce the number of reads per write
+MARLIN BP,MARLINCT-1800,TTR: Reduce T33 zone test
+MARLIN BP,MARLINCT-1807,"TTR: Write/Read Xfer Test Zn reduce (0,2,104)"
+MARLIN,MARLINCT-1797,          1) COBRA op 6-11% push (see actual TT look like) (ZAP) - [L] [CAL2]
+MARLIN,MARLINCT-1803,"          2) DPCO logic flow update under state parameter applyMaxDpcoWriteClr. - [L] [CAL, CAL2]"
+MARLIN,MARLINCT-1797,          3) VBAR_SME_LSR (COBRA) - [CAL2]
+MARLIN,MARLINCT-1800,          1) Revisit T33 call - reduce qty & Sampling revs - [L] [PRE2-FNC2]
+MARLIN,MARLINCT-1798,"          2)TTR: PCBA_SCRN_T102 Optimization - [L] [PRE2, CRT2, PWT]"
+MARLIN,MARLINCT-1742,          3) Update BPI/TPI FMT viz PC file on HSMR - [L] [CAL2]
+MARLIN,MARLINCT-1807,          4) W/R Xfer Sampling Test - [L][FIN2]
+MARLIN,MARLINCT-1809,          5) FIN2 HAMR file 100 polling optimization - [L][FIN2]
+MARLIN,MARLINCT-1815,          6) Download code process optimization or temp lock - [FIN2]
+MARLIN,MARLINCT-1828,          7) SF3_DPCO_CAL2 removal - [L][CAL2]
+MARLIN,MARLINCT-1821,          8) Write Opti - Read Reduction: 2 reads to 1 - [L][CAL2]
+MARLIN,MARLINCT-1799,          1) T461reduction / T461 during ZAP (do only even or odd zone) - [L] [PRE2-PWT]
+MARLIN,MARLINCT-1859,          2) TTR: Remove PRE2 prm_282_hiResVCMBodeTemp. - [L][PRE2]
+MARLIN,MARLINCT-1864,          3) ASSCI diag removal for TTR - [FIN2]
+MARLIN,MARLINCT-1865,"          4) TTR: PCBA_SCRN_T102 Optimization #2 - [PRE2,CRT2,PWT]"
+MARLIN,MARLINCT-1757,          5) T299: Disable Track Center Search - [PRE2-PWT]
+MARLIN,"MARLINCT-365
+MARLINCT-1805",          6) HSMR write pass rml (PWT intercept) - [PWT]
+MARLIN,"MARLINCT-1784
+MARLINCT-1643
+MARLINCT-1763","           1) PROZ phase #1 (H-CMR mode) - [FNC2] - phase in 60%, 100% by month"
+MARLIN,MARLINCT-1853,          1) T47 change to accommodate SCOPY TTR change. [SCOPY]
+MARLIN,MARLINCT-1861,"          2) Marlin - T33 calls - Reduce Rev - [L][PRE2,FNC2]"
+MARLIN,MARLINCT-1889,          3) TTR opportunity of using DTS commmand - [L][FIN2]
+MARLIN,MARLINCT-1911,          4) Small TTR- baud verification - [L][FIN2]
+MARLIN,MARLINCT-1857,"          5) C0 sensitivity scoring from multi-rate to single-rate: - [PRE2, CAL]"
+MARLIN,MARLINCT-1879,          6) T451 Random Pattern Generation 5% TTR - [CAL2]
+MARLIN,MARLINCT-1958,"       1) TTR: T282 reduce ""idle time"" - [PRE2, CAL]"
+MARLIN,MARLINCT-1984,"       2) Project to remove UACT1 ""milli"" actuator Bode"
+MARLIN,MARLINCT-2012,       3) T282 – Bode convergence check
+MARLIN,MARLINCT-2018,"       4) Reducing the SkDly in t135 from 20ms to 0ms [PRE2,CAL,PWT]"
+MARLIN,MARLINCT-1676,       5) TCG_PREP EC11087 improvment [FIN2]
+MARLIN,MARLINCT-2008,       1) TTR: ZAP Seek Path Optimization ( PROZ/OCZ ) [EWC T275] - [FNC2]
+MARLIN,MARLINCT-2100,       2) LASER_INIT process optimize
+MARLIN,MARLINCT-1916,       3) T2108 Read TTR by increasing CertTrkStep (SkInc) to 75 from default 30 [FNC2]
+MARLIN,MARLINCT-2057,"       4) EWC Radical malloc (15hrs) [CAL, CAL2,FNC2] (New)"
+MARLIN,MARLINCT-2018,       6) Reducing the SkDly in t135 from 20ms to 0ms for AFH1_LOCD
+MARLIN,MARLINCT-1901,       7) PC compression(Save state)- about 7 hrs
+MARLIN,MARLINCT-1754,       8) STFL Enable for SMR only 
+MARLIN,MARLINCT-2131,       1) DRAM test during soak test
+MARLIN,MARLINCT-2143,       2) Remove extra t461 BER measurements around ZA
+MARLIN,MARLINCT-2159,       3) Sample PSV_SCOPY_QUALITY state in PRE2.
+MARLIN,MARLINCT-1948,"       4) T285 DRCM optimize servo sector step iteration. [PRE2,PWT]"
+MARLIN,MARLINCT-1868,       5) Reduce redundance VBAR ATI - [L][CAL2]
+MARLIN,MARLINCT-2210,"        7) WPOPTI: Pickup of SF3 TTR, and PF3 TTR   (2.5+1 hrs)"
+MARLIN,MARLINCT-1704,       1) FPW CAL2 removal (45hrs) - (Can enable by CMS)
+MARLIN,MARLINCT-1913,      2) TA scan feed forward - [H][SCOPY]
+MARLIN,MARLINCT-2217,       3) Active Servo Flaw Table (ASFT) build algorithm change
+MARLIN,MARLINCT-2122,       1) BER collection removal/reduce t25 rev/RRO screen removal
+MARLIN,Need Jira,       1) Leverage items from Summit
+MARLIN,MARLINCT-2200,       2) Opti settling bypass BIE
+MARLIN,MARLINCT-2201,       3) Increase Opti LC_Delay step size from 2 to 4
+MARLIN,MARLINCT-2202,       4) apply Increase Opti LC_Delay step size from 2 to 4 to all opti calls
+MARLIN,MARLINCT-2122,       1) Marlin TTR remove state (Estimate 39hrs)
+MARLIN,MARLINCT-1867,       2) VBAR ATI prediction ML - [L][CAL2] - ? hr - require TVM separate
+MARLIN,MARLINCT-1820,       3) VBAR lacer PRE2 predict ML phase 1 - [H][PRE2] - 1hr
+MARLIN,MARLINCT-1846,2) Optimize sorting time  (H-SMR mode) -  [L] [FNC2]
+MARLIN,MARLINCT-2117,"3) ZAP 1-rev [FNC2][H] (maximum 60hr, projected 30 )- not allow"
+MARLIN,MARLINCT-2157,        4) VBAR_WP OPTI write by conds [CAL2] [M](projected 4)
+MARLIN,TSR-6211,        1) SMR POML  (12 hrs)
+MARLIN,MARLINCT-2226,        2) SF3 reloadRAP eval
+MARLIN,MARLINCT-1905,       1) Soak Removal - [H][SPIN] [plan complere ww32] (120 hr)
+MARLIN,"TSR-4468
+MARLINCT-1749",        2) Bank write Phase1 -  FPW b4VBAR optimize by T463 (Bank Write) - [H][CAL2]
+MARLIN,Need Jira,       3) Bank Write Phase2 (4Hd)
+MARLIN,TBD,        1) MQM removal 100%
+MARLIN,DISC-13649,       1) Remove duplicate T461 (CAL_BER) - [L][PRE2-PWT]
+MARLIN,TBD,       2) ZAP ML - [H][FNC2]
+MARLIN,MARLINCT-2018,         3) Reducing the SkDly in t135 for 4hr TTR
+MARLIN,"TSR-4851
+MARLINCT-1890",       4) Nimbus Split Temp (No wait Time) - Already in PCO7.2.05
+MARLIN,MARLINCT-1833,      2) Weld After Assembly - [H][PWT]
+MARLIN,MARLINCT-1782,      3) FMT certify by condition - [H][FIN2]
+MARLIN,MARLINCT-1908,      5) T418 refractoring - [PRE2]
+MARLIN,MARLINCT-1906,      9) DOS threshold reduce quantitis of zone as we see some more margin
+MARLIN,FWSD-6603,     11) Merge Master Format and SinglePassFlawScan (SPFS)
+SUMMIT,SUMMIT-1187,        POML OTF
+SUMMIT,SUMMIT-1200,        POML WW
+SUMMIT,SUMMIT-1376,        T102 optimize
+SUMMIT,SUMMIT-1132,        ZAP Audit optimize (3.5.0C)
+SUMMIT,SUMMIT-1188,       T299 Reduce num wirte (3.5.0C)
+SUMMIT,SUMMIT-1189,        Power cycle optimize
+SUMMIT,SUMMIT-1450,T299 opti RAP saving 
+SUMMIT,SUMMIT-1430,T130 optimize
+SUMMIT,SUMMIT-1481,T297 optimize
+SUMMIT,SUMMIT-1479,Opti HME compoment CAL2
+SUMMIT,SUMMIT-1502,TTR- Disable MT50/10 measurements (Test269)
+SUMMIT,SUMMIT-1526,BER_OPTI remove redundant repeated T461
+SUMMIT,SUMMIT-1374,Update boost opti range for more stable zn to zn CTF
+SUMMIT,SUMMIT-1343,Reduce num of read  (VBAR WP) (pull in)
+SUMMIT,SUMMIT-1345,TTR BPI - TPI FMT update (Pull in)
+SUMMIT,SUMMIT-1431,SPFS with SkInc optimization (CMR/ SMR)
+SUMMIT,SUMMIT-1580,SPFS with SkInc optimization (CMR/ SMR)
+SUMMIT,SUMMIT-1314,TTR T297 optimize data collection CAL2 (Pull in)
+SUMMIT,SUMMIT-366,"PROZ from preamp allocation as of Feb10,2025 (50% to 100%)"
+SUMMIT,SUMMIT-1863,BER_OPTI Variable spare (Pull in)
+SUMMIT,SUMMIT-1708,"Reduce T299 Numwrt  (CAL2,  PWT), focus Expand"
+SUMMIT,SUMMIT-1749,Remove MAVGRO in Summit
+SUMMIT,"SUMMIT-1202/
+SUMMIT-1850","FINE_UJOG_INIT TTR (Goby) by condition (CAL2-CMR/HSMR)
+"
+SUMMIT,SUMMIT-1757,TTR: Remove SWD_CAL SkipWriteDetect_198 (CAL2/ CRT2)
+SUMMIT,"SUMMIT-1576/
+TSR-4093",TTR on Summit CMR PWT VARIABLE_SPARES (TT -1.5)
+SUMMIT,SUMMIT-1834,"Remove T298 in T299_ATI and WRITE_SCRN (FNC2, PWT)"
+SUMMIT,SUMMIT-1825,Reduce PES(T33) test revs from 32 to 16 (FNC2)
+SUMMIT,SUMMIT-1703,"Special 24 hrs TTR, Pick only CRT2 T299 (CRT2)"
+SUMMIT,SUMMIT-1509,   TTR- Reduced BER measure WPOPTI (CAL2)
+SUMMIT,SUMMIT-1545,   TTR: T451 increase step size from 2 to 4 for LC_DELAY_SDW (CAL2)
+SUMMIT,SUMMIT-1612,   T299 optimize track center (FNC2)
+SUMMIT,SUMMIT-1772,   T299 optimize track center (FNC2)
+SUMMIT,SUMMIT-1563,   VBAR ATI reduce redundance (CAL2)
+SUMMIT,SUMMIT-1511,Archor zn opti in Derived opti to rmv Read Opti OD
+SUMMIT,SUMMIT-1896,Remove prm_461_ReadOffsets in CAL2 BER_OPTI & FNC2 BER_SPFS
+SUMMIT,SUMMIT-1878,TTR: Remove T315
+SUMMIT,SUMMIT-1501,TTR- OD_PAD_MQM removal
+SUMMIT,SUMMIT-1853,Opti Settling bypass BIE into Summit branch for TTR
+SUMMIT,SUMMIT-1612,T299 optimize track center (CAL2/FNC2/CRT2/PWT)
+SUMMIT,SUMMIT-1772,T299 optimize track center (CAL2/FNC2/CRT2/PWT)
+SUMMIT,SUMMIT-1845,Improve VBAR findMargin function speed
+SUMMIT,SUMMIT-1898,TTR remove SAVE_STATE at SCOPY and PRE2
+SUMMIT,SUMMIT-1715,ProZ : P90/Test time reduction improvement (FNC2)
+SUMMIT,SUMMIT-1861,TTR: PCBA_SCRN_T102 Optimization
+SUMMIT,SUMMIT-1765,TTR: T193 test time reduction
+SUMMIT,SUMMIT-1031,TTR : T150 measure only servo primary reader
+SUMMIT,SUMMIT-1880,TTR : T150 measure only servo primary reader
+SUMMIT,SUMMIT-1824,TTR: T335 reduce number of test tracks on STM scan and GC scan
+SUMMIT,SUMMIT-1929,TTR : Remove PES_SCRN_RD_MODE T33 on read offset in FNC2
+SUMMIT,SUMMIT-1916,TTR opportunity of using DTS command
+SUMMIT,SUMMIT-1854,TTR: T451 increase step size from 2 to 4 for LC_DELAY_SDW (register ID 2164) for test time saving for all T451
+SUMMIT,SUMMIT-1881,TTR: MSMR dual reader test by condition (from single reader)
+SUMMIT,SUMMIT-1033,ATI write optimization in WP (Implement Version)
+SUMMIT,SUMMIT-1913,TTR: Remove LUL flawscan in fnc2
+SUMMIT,SUMMIT-1938,Remove T285 in CAL state CAL_SERVO_285
+SUMMIT,SUMMIT-1958,Scopy RSEED - Remove VCAT Calibration at step4
+SUMMIT,SUMMIT-1872,TTR: Summit EAW (Erase After Write) Test Zone Reduction
+SUMMIT,SUMMIT-1987, Enhance TTR Reduce zone W/R XFER (PWT)
+SUMMIT,SUMMIT-1692,TTR: Summit HSMR SPFS with SkInc optimization
+SUMMIT,SUMMIT-1839,POML SMR - PCO3.5.0J_VC1C
+SUMMIT,SUMMIT-1445,SQUEEZE_OFFSET_INIT (SMR) 
+SUMMIT,SUMMIT-1825,Reduce PES(T33) test revs from 32 to 16 by condition
+SUMMIT,SUMMIT-1971/1921,T282 C0 sensitivity scoring from multi-rate to single-rate
+SUMMIT,SUMMIT-1950,TTR: T285 DRCM optimize servo sector step iteration
+SUMMIT,SUMMIT-1981,TTR: CERT portion Powercycle
+SUMMIT,SUMMIT-2030,"TTR: T282 reduce ""idle time"""
+SUMMIT,SUMMIT-2068,Reduction of Test Loops of PWT: SEEK_TEST_PWT State
+SUMMIT,SUMMIT-2070,Temporary Disable New Servo Reader Selection TTR-T163
+SUMMIT,SUMMIT-1701,Temporary State Removal (CRT2)
+SUMMIT,SUMMIT-1701,Temporary State Removal (PWT)
+SUMMIT,SUMMIT-2064,Temporary State Removal (CAL2)
+SUMMIT,SUMMIT-2064,Temporary State Removal (FNC2)
+SUMMIT,SUMMIT-2064,Temporary State Removal (SPSC2)
+SUMMIT,SUMMIT-2077,Remove SF3 Weld before CERT.
+SUMMIT,SUMMIT-2078,Remove T240 Zn1 in write screen state (temp) 300dppm
+SUMMIT,SUMMIT-1435 / 1398 & 1042,T451 new derived method + Adding RegID 0x0903 sweeping
+SUMMIT,SUMMIT-1302,TA scan FF TTR/ TA scan Cell#3 TTR (25 to 12.5) 
+SUMMIT,SUMMIT-1134,ZFS (20) - run on BRC5832
+SUMMIT,SUMMIT-2078,Remove Zn1 at WRITE_SCRN
+SUMMIT,SUMMIT-2162,Summit T282 TTR Improvement via Single FLASH Update Post SNO Tuning (New Servo xx64)
+SUMMIT,SUMMIT-2155,T282 - Bode Convergence
+SUMMIT,SUMMIT-1996,TTR: Optimize T461 Flow
+SUMMIT,SUMMIT-2086,TTR: Investigate further TTR in MSMR_SR_RDR_TST_2 by running through exceptions
+SUMMIT,SUMMIT-2273,TTR: T240 TEST ZONE by Condition #Phase2
+SUMMIT,SUMMIT-2274,"TTR: FINE_UJOG_INIT GobyLite (for PK1, unlock condition)"
+SUMMIT,SUMMIT-1597,(SMR) Investigate SMR uJOG Optimization for TTR and Robustness
+SUMMIT,SUMMIT-1881,(SMR) TTR: MSMR dual reader test by condition (from single reader)
+SUMMIT,"FWSD-6603/
+SUMMIT-1943/",TTR: CMR Skip Track Format Certify
+SUMMIT,SUMMIT-2226,CMR Skip Track Format Certify NMD improvement
+SUMMIT,SUMMIT-2230,SCOPY YIP#6
+SUMMIT,SUMMIT-1779,VBAR_ATI Prediction (CAL2)
+SUMMIT,SUMMIT-2092,TTR: Investigate potential reduction in VBAR_SME1 iterations
+SUMMIT,SUMMIT-2266,TTR malloc on Goby - Seagate JIRA
+SUMMIT,SUMMIT-2118,TTR: ZAP Seek Path Optimization ( PROZ/OCZ )
+SUMMIT,SUMMIT-2300,TTR: Remove 1>N28 from DNLD_CODE_TCG_SPT
+SUMMIT,SUMMIT-2345,"TTR: PWT optimization: DNLD_CODE, enableDiags, Powercycle"
+SUMMIT,"SUMMIT-2314
+DISC-CR0014255",TTR: Integrated Milli/Micro Structure Bode Measurement with One-Shot SS1X Bode Measurement
+SUMMIT,"SUMMIT-2096/
+SUMMIT-2120
+DISC-CR0014268",TTR on LUL_TEST25 (Concern OD_PAD_MQM removal 1.2 hr) 2 hrs (was 2.5 hrs.)
+SUMMIT,TSR-6784,TTR: VM optimize 
+SUMMIT,TSR-6527,Channel Opti TTR in VBAR_ATI
+SUMMIT,SUMMIT-2091,TTR: Investigate potential T299 DistlBndSz optimization in T299_EXPN_STE_SCRN
+SUMMIT,SUMMIT-1879,TTR: Investigate test time savings by reducing Number of writes in T299_ATI and T299_DS_ATI
+SUMMIT,DISC-CR0014332,Remove WRITE_POWER_TCC State -- WRITE_POWER_TCC
+SUMMIT,SUMMIT-2279,TTR: Test 33 Seek Delay Improvement (SF3)
+SUMMIT,TSR-6529,TTR: T102 on PCBA Screen (SF3) + (new PF3)
+SUMMIT,DISC-CR0014330,Remove 10 zone at P461_READ_OFFSET_SFR -- Write ability solo
+SUMMIT,DISC-CR0014334,"Remove Zn2, 4, P461_BIE_MEAN_BY_TRACK  -- Write ability solo"
+SUMMIT,DISC-CR0014319,Fix T94 on non-PRE2 TA scan
+SUMMIT,DISC-CR0014269,T220 WP Opti bypass channel training and offset searches
+SUMMIT,DISC-CR0014225,TTR- T240 Predict Final Write
+SUMMIT,SUMMIT-2355,"TOPAZ Opt 1 (TgtRRO 0.029"")"
+SUMMIT,SUMMIT-2272,TTR: Reduce num write of zone 0 at VBAR_ATI
+SUMMIT,DISC-CR0014322,AFH optimize test zone to 8 from 11
+SUMMIT,DISC-CR0014323,Increase start DAC
+SUMMIT,SUMMIT-2355,"TOPAZ (Need SUMMIT-2052, 2255, 2053)"
+SUMMIT,SUMMIT-2337,SCOPY spiral write (YIP#7)
+SUMMIT,TSR-6529,TTR: T102 on PCBA Screen
+SUMMIT,SUMMIT-2302,TTR: PCBA_SCRN extreme optimization. [T102 reduce loop]
+SUMMIT,SUMMIT-2279,TTR: Test 33 Seek Delay Improvement
+SUMMIT,DISC-CR0014225,TTR- T240
+SUMMIT,SUMMIT-1818,"         (SMR) FMT certify by condition (25hrs) 
+**Concern EC14184** Escape ~ 2.5%"
+SUMMIT,SUMMIT-1914,TTR: T094 (Only Pre TA Scan)
+SUMMIT,DISC-CR0014267,Optimize T461 reduce zone in some state
+SUMMIT,SUMMIT-1900,Single Sector RMM + Zero Latency Writes
+SUMMIT,SUMMIT-2327,TTR: New Servo Code xx66
+SUMMIT,SUMMIT-1733,TTR: T297 SUMMIT TTR Plan (Phase 3)
+SUMMIT,SUMMIT-1401,        Improve opti settle T451
+SUMMIT,Pending,Remove PWT SF3 portion​ for weld before CERT portion.
+SUMMIT,Pending,ZAP machine learning (PROZ?) - revist vs TOPAZ
+SUMMIT,SUMMIT-1851,Optimizing AFH Test 135 'start_dac' for Wrt/Rdr Htr
+SUMMIT,SUMMIT-1846,"PC file compression (T231, T130)"
+SUMMIT,TBD,T451 opti overhead
+SUMMIT,?,     4.10) PROZ enhance for TTR (SMR mode Sorting)
+SUMMIT,SUMMIT-1134,     4.11)  ZFS (20) - run on BRC5832 (PCO3.7.2)
+SUMMIT,SUMMIT-1201,Enable XBAR (Memory optimize in ZAP)
+SUMMIT,SUMMIT-1756,Variable spare Enhance
+SUMMIT,SUMMIT-2083,150x Channel speed up
+SUMMIT,TBD,ATI expantion Zn0 removal (0.01% failure)
+SUMMIT,SUMMIT-1595,VM optimize (SSDC)
+SUMMIT,SUMMIT-1868,VM optimize (SSDC)
+SUMMIT,SUMMIT-2276,TTR: Further improvements on TTR in VBAR_METRICS
+SUMMIT,TSR-5008,Add Fast MSMR Combined Reader Calculation mode to either T238 or T438
+SUMMIT,SUMMIT-2280,Add Fast MSMR Combined Reader Calculation mode to either T238 or T438
+SUMMIT,SUMMIT-2278,TTR: Sampling T240 Zn1 in write screen state.
+SUMMIT,SUMMIT-1197,T299 TTR-ML Zn prediction
+SUMMIT,Risk,Risk High TTR 
+SUMMIT,H, T102 opti
+SUMMIT,SUMMIT-954,T240 EAW
+SUMMIT,H,VBAR init predict
+SUMMIT,H,T299 ATI optimize test zone
+SUMMIT,SUMMIT-1749,T33 optimize
+SUMMIT,SUMMIT-1031,Lin screen opti
+SUMMIT,H,CMR FMT certify by condition
+DORADO,Dorado-906,4.4.1) Soak 9 days (refer to row xx
+DORADO,Need Jira,"PCO 4.4.x)Dynamic  Soak 9 days -> 7 day avg
+    HSMR Needs Mango approval and Exec discussion before cutting into PCO
+    SMR is cut in on these dates assuming FW32 DOE has good results"
+DORADO,Dorado-950,Reduct T87 overhead loop in laser cal function  
+DORADO,Dorado-619,T461 in FLC_DELTA remove 9% sqz delta 0.05hrs
+DORADO,Dorado-737,PRISM removal (was temporaily added in early Dorado bringup)
+DORADO,Dorado-898,Remove butterfly write seek (need TTR amount)
+DORADO,Dorado-607,T461:Adjust T461 measurements that track BER changes rough the tes process for TTR
+DORADO,Dorado-812,       VBAR_TPISME1 reduce max number of backoff steps 
+DORADO,Dorado-1036,"EWC changes ported from Marlin (Radical malloc, Smooth linear Bode, Reduce skdly in T135, T282 Idle Time red, ZAP seek path optimization
+MarlinCT-1958,2008, 2012, 2018, 2057
+Dorado 1156, 1157, 1159, 1177, 1179"
+DORADO,Dorado-1179,"TTR - Radical malloc eval  (6 hrs) (MarlinCT-1958, MarlinCT-2057)"
+DORADO,Dorado-1159,"TTR: T282 reduce ""idle time""  (9 hrs) (MarlinCT-2018)"
+DORADO,Dorado-1156,TTR: Further Test Time Reduction In T282 - Bode Convergence Check (8 hrs)
+DORADO,Dorado-1158,ZAP Seek Path Optimization (8 hours)
+DORADO,Dorado-1157,TTR - Reducing the SkDly in t135 from 20ms to 0ms (5 hrs)
+DORADO,Dorado-1223,Remove FNC2 state T299_DS_ATI for TTR
+DORADO,Dorado-1224,Remove CRT2 state T299_ATI for TTR
+DORADO,Dorado-621,FNC2: T461 BER tracking measurements:  reduce zone make to every 8th zone
+DORADO,Dorado-583,LPV Iop Adjust by Head
+DORADO,Dorado-959,"SMR : LZR"" VBAR_LAsER: in T211 use Tpiode=2 (DS only)"
+DORADO,Dorado-1037,"SMR Dorado1 ractional VISA byZone, By preamp"
+DORADO,Dorado-906,Soak optimization (14days to 9days FW32 DOE results) refer to soak optimization section for time
+DORADO,Dorado-902,"MQM 2 loop move to iMQM (Q426 30% iMQM, Q127 10%, Q227 1%"
+DORADO,Dorado-1011,Scopy TA-FF
+DORADO,Dorado-952,HSMR:T451 Reduce the Reg list in State Derived_OpTI_2
+DORADO,need Jira,T102 PCBA_SCRN TTR 
+DORADO,Dorado-1080,T102 PCBA_SCRN during soak
+DORADO,Dorado-1015,Skip track certify in format (TTR) (SMR only)
+DORADO,Dorado-1198,Remove PWT SF3 portion for weld before Cert
+DORADO,Dorado-1116,    PC file compression (15 hrs ? - 
+DORADO,need Jira, State removal items (PWT/RW Xfer) TTR  TBD)
+DORADO,Dorado-1247,Reduce drive power off from 20s to 5s
+DORADO,Dorado-1248,Pause time reduce from 20s to 3s
+DORADO,Droadao-1249,Baud rate optimziation
+DORADO,Dorado-1092,"Remove uACT1 ""milli"" actuator Bode"
+DORADO,Droado-461,HSMR Conditional Certify HSMR 6C 
+DORADO,Dorado-622,CRT2: T461: reduce zone mask to every 8th zone
+DORADO,Dorado-651,Disable BPIC_SWEEP for TTR (35 min)
+DORADO,Dorado-979,Dorado1 IBW with NoAdjTracks (fro weak write)
+DORADO,Dorado-1228,Evaluate modification of Active Servo Flaw Table (ASFT) build algorithm
+DORADO,Dorado-1029,NDS to run in parallel with Soak (8 days savnigs)
+DORADO,Dorado-1022,TPI for iVBAR
+DORADO,Need Jira,   Flex SAP update (intelligent - only when needed)
+DORADO,Need Jira,Scopy higher time than Summit (HAMR - lower RPM RSEED + Laser cal +..)
+DORADO,"WW24 eval rel WW44?? 20hd reli 500 hr ckpt
+WW45 mp rel",4.4) PCO TTR Q1FY27 (PCO 5.x.z)
+DORADO,Dorado-1136,NDS to utilize 2 or 4 head bank write
+DORADO,Dorado-439,SMR: Shingled SMR adj writes for LBA
+DORADO,Dorado-516,FPW DOE for 25 nm NFT (Dorado 2) 
+DORADO,Dorado-617,SPIO MQM develoment - merge from PF3 trunk to Dorado branch
+DORADO,Dorado-624,ZAP Iteration 3 ->2  TTR (with PROZ) (business trade-off - not approved)
+DORADO,Dorado-813,Dorado Goby 7 2.0 Sector skew in SPF
+DORADO,Dorado-519,PROZ HSMR  (H-CMR& H-SMR customer approval needed)
+DORADO,Dorado-903,2 head Bank Write on FPW before VBAR
+DORADO,Dorado-1280,FPW Removal (follow MarlinBP plan) + RGA on Dorado (FW35 reli ckpt)
+DORADO,Dorado-461,   HSMR Phase C (45 hrs for conditional read CMR)
+DORADO,need Jira,Scopy Spiral Bank write
+DORADO,DORADO-905,POML All mode
+DORADO,Dorado-548,Implement TOPAZ with PROZ (Z-PATH)
+DORADO,need jira,4 head Bank write on FPW before VBAR (not neeed if FPW removal intersects 1st)
+DORADO,Dorado-907,Dynamic Soak on Dorado
+DORADO,need jira,SMR Format removal (ref MBP-1730) (~25hrs)  (10% of drive write/Rd) hr TTR)
+DORADO,Dorado-909,Merge Master Format and SPFS (CMR only) (Goby 7)
+DORADO,need jira,Fast uJog in T299
+DORADO,need jira,T282 C0 sensitivity opti
+DORADO,need jira,T451 Random Pattern Generation 5% TTR
+DORADO,need jira,T299 reduce num write
+DORADO,need jira,Reduce redundant zones test of VBAR_ATI
+DORADO,?,"Project to remove UACT1 ""milli"" actuator"
+DORADO,?,T285 DRCM opti
+DORADO,?,T299 RAP Saving (4)
+DORADO,need jira,Update BPI/TPI FMT via PC file
+DORADO,need jira,CRT2 Tripple Track BER monitor
+DORADO,need Jira,Remove CAL2 SF3_DPCO data collection state
+DORADO,need Jira,T33 calls/
+DORADO,need jira,Write Opti - Read Reduction: 2 reads to 1 at CAL2
+DORADO,need jira,FNC2 RRO_SCRN_x removal
+DORADO,need jira,TTR: Remove PRE2 prm_282_hiResVCMBodeTemp
+DORADO,need jira,TTR: CERT portion Powercycle
+DORADO,need jira,T299: Disable Track Center Search
+DORADO,need jira,Write Process Restructuring: Fix to VBAR Laser Setup
+DORADO,need jira,Test Time: T297 Data Trimming at PRE2
+DORADO,need jira,Test Time: T297 Data Trimming at CAL2
+DORADO,need jira,Erasure Testing - Fast Write Modes (T298/T299)
+DORADO,need jira,TTR: To close TT gap (vs Marlin) - BER measurement
+DORADO,need jira,T282 sensitivity projection optimization - data & test time reduction
+DORADO,need jira,MarlinBP remove state (est. 43 hrs)
+DORADO,need jira,SPFS T2108 Read TTR by increasing CertTrkStep (SkInc) to 75 from default 30
+DORADO,need jira,T461 AC Erase Support
+DORADO,need jira,FNC2 T150 Linearization monitor (1.2)
+DORADO,need jira,T461 similar to marlin JIRA1036
+DORADO,need jira,PC file compression 
+DORADO,Dorado -1289,OEE SPSC2 + PWT  
