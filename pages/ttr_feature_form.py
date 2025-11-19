@@ -6,7 +6,7 @@ import config
 
 from streamlit import session_state as ss
 import uuid
-
+st.stop()  
 st.set_page_config(page_title="Feature View", layout="wide")
 
 # ---------------------------------------------------------
@@ -25,6 +25,7 @@ current_tasks = current_tasks[current_tasks['Improvement_Type'] == "TTR"]
 
 
 # Filter rows based on user_review_list
+
 current_tasks = current_tasks[current_tasks['Program'].isin(default_programs)]
 
 

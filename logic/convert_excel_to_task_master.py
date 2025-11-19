@@ -14,7 +14,7 @@ def main():
     # Read the CSV files
     raw_ttr_item_path = config.TTR_ITEM_MASTER_FILE_PATH
     task_master_path = config.TASK_MASTER_FILE_PATH
-    
+
 
     # Check if task_master_path exists
     try:
@@ -25,37 +25,46 @@ def main():
 
     # Load the raw TTR item data
     df_raw_ttr_item = pd.read_csv(raw_ttr_item_path)
+    df_raw_ttr_item = df_raw_ttr_item[df_raw_ttr_item['Source'].isin(['excel_import', ])]
 
     # Select only the required columns from raw_ttr_item_path
-    required_columns = ['Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN']
+    required_columns = ['Source','Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN']
     df_raw_ttr_item = df_raw_ttr_item[required_columns]
 
-    # Merge the DataFrames on 'Program' and 'Task_Name'
-    if df_task_master.empty:
-        merged_df = df_raw_ttr_item  # If task_master is empty, use raw_ttr_item directly
-        merged_df['Merge_Action'] = 'new'  # Add MergeAction column with 'new'
-    else:
-        merged_df = pd.merge(df_task_master, df_raw_ttr_item, on=['Program', 'Task_Name'], how='left', suffixes=('', '_new'))
+    update_cols = ['Source', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Improvement_Type', 'GAIN']
 
-        # Check and update Merge_Action column
-        def determine_merge_action(row):
-            for col in required_columns:
-                if col in ['Program', 'Task_Name']:
-                    continue  # Skip key columns
-                if row[col] != row.get(f'{col}_new', row[col]):
-                    return 'modified'
-            return 'same'
+    keys = ['Program', 'Task_Name']
 
-        merged_df['Merge_Action'] = merged_df.apply(determine_merge_action, axis=1)
+    merge_cols = keys + update_cols
 
-        # Drop temporary columns
-        merged_df.drop(columns=[f'{col}_new' for col in required_columns if f'{col}_new' in merged_df.columns], inplace=True)
+    dest = df_task_master.copy()
+    dest = dest.merge(
+        df_raw_ttr_item[merge_cols],
+        on=keys,
+        how="left",
+        suffixes=("", "_src"),
+    )
 
-    # Remove duplicate rows based on 'Program' and 'Task_Name', keeping the first occurrence
-    merged_df = merged_df.drop_duplicates(subset=['Program', 'Task_Name'], keep='first')
+    for col in update_cols:
+        dest[col] = dest[f"{col}_src"].combine_first(dest[col])
+        dest = dest.drop(columns=[f"{col}_src"])
+    # Select only the required columns from raw_ttr_item_path
 
+    key_df = dest[keys].drop_duplicates()
+    new_rows = df_raw_ttr_item.merge(
+        key_df,
+        on=keys,
+        how="left",
+        indicator=True
+    )
+    new_rows = new_rows[new_rows["_merge"] == "left_only"].drop(columns=["_merge"])
+
+    # 3) CONCAT destination + new rows
+    result = pd.concat([dest, new_rows], ignore_index=True)
+
+    result = result.drop_duplicates(subset=['Program', 'Task_Name'], keep='last')
     # Save the merged DataFrame back to the task master file
-    merged_df.to_csv(task_master_path, index=False)
+    result.to_csv(task_master_path, index=False)
 
     print(f"Merged data saved to {task_master_path}")
 

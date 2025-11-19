@@ -24,7 +24,10 @@ if len(selected_product)>3:
 # Load data (will reload when session state changes)
 current_tasks = pd.read_csv(config.TASK_MASTER_FILE)
 current_tasks = current_tasks[current_tasks['Improvement_Type'] == "TTR"]
-current_tasks = current_tasks[current_tasks['Improvement_Type'] == "TTR"]
+
+# Ensure required column exists
+if 'User_Review' not in current_tasks.columns:
+    current_tasks['User_Review'] = ""  # initialize with blank values
 
 # Filter rows based on user_review_list
 
@@ -132,6 +135,12 @@ if filter_text:
             # Filter rows where the specified column has null values
             df_filtered_tasks = df_filtered_tasks[df_filtered_tasks[colNull].isna()]
 
+    elif filter_text.find("_nnull") != -1:
+        colNull = filter_text.replace("_nnull","")
+        if colNull in current_tasks.columns:
+            # Filter rows where the specified column has null values
+            df_filtered_tasks = df_filtered_tasks[df_filtered_tasks[colNull].notna()]
+
 
     # Apply text filter across all columns
     elif filter_text:
@@ -158,9 +167,6 @@ if filter_text:
             )
         
         df_filtered_tasks = df_filtered_tasks[mask]
-
-
-
 
 
 # Display editable dataframe with column configuration
