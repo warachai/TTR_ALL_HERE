@@ -53,7 +53,7 @@ def convertTaskID(program: str, task_id_value: str) -> str:
                 prefix = getProjectNameFromProgram(program)
                 task_id_final = f"{prefix}-{m.group(0)}"     
     
-    print(f"Converted raw Task ID '{task_id_value}' to normalized Task ID '{task_id_final}'")
+    #print(f"Converted raw Task ID '{task_id_value}' to normalized Task ID '{task_id_final}'")
     return task_id_final
 
 def main():

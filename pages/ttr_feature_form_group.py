@@ -133,12 +133,28 @@ df_filtered_tasks = (
         .sort_values(['Program', 'Source', '_task_num', 'Task_ID'], ascending=[True, False, False, False])
         .drop(columns=['_task_num'])
 )
+#### MMM need link to DISC
+# Construct issue hyperlink column (Jira by default; DISC Korat for CR IDs)
+if 'Task_ID' in df_filtered_tasks.columns:
+    import re as _re
+    def _make_issue_link(task_id: str):
+        if pd.isna(task_id):
+            return ""
+        s = str(task_id).strip()
+        m = _re.match(r'^CR(\d+)', s, flags=_re.IGNORECASE)
+        if m:
+            # DISC Korat request link expects just the numeric part
+            return f"{config.DISC_REQUEST_BASE_URL}/{m.group(1)}/"
+        # Fallback to Jira browse URL (JIRA_BASE_URL already ends with /browse/)
+        return f"{config.JIRA_BASE_URL}{s}"
+    df_filtered_tasks['Jira_Link'] = df_filtered_tasks['Task_ID'].apply(_make_issue_link)
 
 df_filtered_tasks = df_filtered_tasks[
     [
         "Feature_Group",
         "Program",
         "Task_ID",
+        "Jira_Link",
         "Status",
         "Feature_Name",
         "Task_Name",
@@ -157,7 +173,10 @@ master_tasks = st.dataframe(
     height=300,
     hide_index=True,
     key="edited_tasks",
-    on_select="rerun" # Rerun the app when a selection changes
+    on_select="rerun", # Rerun the app when a selection changes
+    column_config={
+        "Jira_Link": st.column_config.LinkColumn(label="Jira", help="Open Jira issue", display_text="View")
+    }
 )
 
 # Show row count

@@ -120,6 +120,7 @@ MARLIN,MARLINCT-1846,MARLINCT-1846,2) Optimize sorting time  (H-SMR mode) -  [L]
 MARLIN,MARLINCT-2117,MARLINCT-2117,"3) ZAP 1-rev [FNC2][H] (maximum 60hr, projected 30 )- not allow"
 MARLIN,MARLINCT-2157,MARLINCT-2157,        4) VBAR_WP OPTI write by conds [CAL2] [M](projected 4)
 MARLIN,TSR-6211,TSR-6211,        1) SMR POML  (12 hrs)
+MARLIN,MARLINCT-2252,MARLINCT-2252,        1) SMR POML  (12 hrs)
 MARLIN,MARLINCT-2226,MARLINCT-2226,        2) SF3 reloadRAP eval
 MARLIN,1905,MARLIN-1905,       1) Soak Removal - [H][SPIN] [plan complere ww32] (120 hr)
 MARLIN,TSR-4468,TSR-4468,        2) Bank write Phase1 -  FPW b4VBAR optimize by T463 (Bank Write) - [H][CAL2]
@@ -392,3 +393,11 @@ DORADO,need jira,NEED JIRA,FNC2 T150 Linearization monitor (1.2)
 DORADO,need jira,NEED JIRA,T461 similar to marlin JIRA1036
 DORADO,need jira,NEED JIRA,PC file compression 
 DORADO,Dorado -1289,DORADO-1289,OEE SPSC2 + PWT  
+MARLIN,MARLINCT-2210,MARLINCT-2210,"       6) WPOPTI: Pickup of SF3 TTR, and PF3 TTR   (2.5+1 hrs)"
+MARLIN,MARLINCT-2168,MARLINCT-2168,       7) HAMR: Temperature Ramp Test - ASTB/VBAR Removal (5-10 hrs)
+MARLIN,MARLINCT-2235,MARLINCT-2235,       4) Opti Power cycle SPFS (T222 call)
+SUMMIT,DISC-CR0014332,CR0014332,Remove WRITE_POWER_TCC state in FNC2
+SUMMIT,SUMMIT-2345,SUMMIT-2345,"TTR: PWT optimization: DNLD_CODE, enableDiags, Powercycle (Phase#2)"
+SUMMIT,DISC-CR0014339,CR0014339,Remove BODE state in PRE2
+SUMMIT,SUMMIT-2361,SUMMIT-2361,TTR: Removal of main_w_mux opti state in CAL2
+SUMMIT,TSR-6762,TSR-6762,TTR: Removal of main_w_mux opti state in CAL2

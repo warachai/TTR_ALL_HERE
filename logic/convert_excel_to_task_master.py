@@ -12,7 +12,7 @@ import pandas as pd  # Ensure pandas is imported
 
 def main():
     # Read the CSV files
-    raw_ttr_item_path = config.TTR_ITEM_MASTER_FILE_PATH
+    raw_ttr_item_path = config.MERGED_OUTPUT_PATH
     task_master_path = config.TASK_MASTER_FILE_PATH
 
 

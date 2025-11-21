@@ -13,9 +13,11 @@ st.set_page_config(page_title="Feature Summary", layout="wide")
 # Dummy data – replace with your own
 # ---------------------------------------------------------
 
-
+default_programs = ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT"]
 # Load data (will reload when session state changes)
 current_tasks = pd.read_csv(config.FEATURE_MASTER_FILE)
+
+current_tasks = current_tasks[current_tasks['Program'].isin(default_programs)]
 
 
 
