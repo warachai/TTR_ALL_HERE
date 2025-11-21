@@ -31,7 +31,7 @@ def main():
     required_columns = ['Source','Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN']
     df_raw_ttr_item = df_raw_ttr_item[required_columns]
 
-    update_cols = ['Source', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Improvement_Type', 'GAIN']
+    update_cols = ['Source', 'Task_ID', 'Status', 'User_Name', 'Improvement_Type', 'GAIN']
 
     keys = ['Program', 'Task_Name']
 
