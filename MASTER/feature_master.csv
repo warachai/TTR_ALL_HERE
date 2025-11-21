@@ -14022,7 +14022,7 @@ jira_issues,MARLIN BP,MBP-1979,Open,,2025-11-20T03:20:22.000+0800,Fixed Capacity
 jira_issues,MARLIN BP,MBP-1978,In Progress,,2025-11-20T00:34:37.000+0800,"[SCOPY MarlinBP] Move SF3 CL 3251383 ""Removed the preamp fault check routine before preamp setting in In-drive Erase"" From Trunk To PCO Release Branch",YIP,,,,
 jira_issues,MARLIN BP,MBP-1977,SME Verification,,2025-11-20T00:24:49.000+0800,"[SCOPY MarlinBP] Move PF3 CL 3263694 ""HAMR Erase - Reset RSEED_ERASE_TYPE attribute at the start of scopy. This may be set from a previous erase run and should be cleared. "" From Trunk To PCO Release Branch",YIP,,,,
 jira_issues,MARLIN BP,MBP-1976,In Progress,,2025-11-20T00:16:56.000+0800,"[SCOPY MarlinBP] Move SF3 CL 3263645 ""Increase the range of the first erase function."" From Trunk To PCO Release Branch",YIP,,,,
-jira_issues,DORADO,DORADO-1392,In Progress,,2025-11-21T03:51:43.000+0800,Set Temperature when transitioning from CAL in Gemini to CAL2 in Nimbus,Others,,,,test
+jira_issues,DORADO,DORADO-1392,In Progress,,2025-11-21T03:51:43.000+0800,Set Temperature when transitioning from CAL in Gemini to CAL2 in Nimbus,Others,,,,
 jira_issues,DORADO,DORADO-1391,Open,,2025-11-21T02:49:20.000+0800,Dorado1: HSMR(SMR) push with LPV margin Evaluation ,YIP,,,,
 jira_issues,DORADO,DORADO-1390,Open,,2025-11-20T22:22:42.000+0800,full SP MQM qual on Saturn tester,TTR,,,,
 jira_issues,DORADO,DORADO-1389,Open,,2025-11-20T07:44:19.000+0800,Dorado SCopy T418 YIP,YIP,,,,
