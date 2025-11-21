@@ -3,20 +3,47 @@
 import streamlit as st
 import pandas as pd
 import config
+from access_logging import log_access
 
 from streamlit import session_state as ss
 import uuid
 
 st.set_page_config(page_title="Feature View", layout="wide")
+# Log site access for this page
+log_access("feature_form_group")
 
 # ---------------------------------------------------------
 # Dummy data – replace with your own
 # ---------------------------------------------------------
 default_programs = ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT", "TSR"]
 params = st.query_params
-selected_product = params.get("product", [None])
-if len(selected_product)>3:
-    default_programs = [selected_product]
+
+# --- URL driven filtering (program & feature_group) ---
+# Accept ?program=MARLIN or ?program=MARLIN,SUMMIT or legacy ?product=DORADO
+raw_program_params = params.get("program", params.get("product", []))
+if raw_program_params:
+    # Streamlit returns list; handle comma-separated values inside first element
+    if isinstance(raw_program_params, list):
+        program_list = []
+        for entry in raw_program_params:
+            program_list.extend([p.strip() for p in str(entry).split(',') if p.strip()])
+    else:
+        program_list = [p.strip() for p in str(raw_program_params).split(',') if p.strip()]
+    # Validate against known programs
+    program_list = [p for p in program_list if p in default_programs]
+    if program_list:
+        default_programs = program_list
+
+# Feature_Group parameter: ?feature_group=MyGroup (single or comma list)
+raw_fg_params = params.get("feature_group", [])
+feature_group_filter_values = []
+if raw_fg_params:
+    if isinstance(raw_fg_params, list):
+        for entry in raw_fg_params:
+            feature_group_filter_values.extend([g.strip() for g in str(entry).split(',') if g.strip()])
+    else:
+        feature_group_filter_values = [g.strip() for g in str(raw_fg_params).split(',') if g.strip()]
+
 
 
 # Load data (will reload when session state changes)
@@ -45,25 +72,28 @@ with filter_row_1_col1:
     program_filter = st.multiselect(
         "Select Product(s)",
         ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT", "TSR"],
-        default=[]
+        default=default_programs if raw_program_params else []
     )
 with filter_row_1_col2:
     improvement_type_filter = st.multiselect(
         "Improvement Type(s)",
         available_types,
-        default=["TTR"],
+        default=[],
         help="Default shows TTR only; select more to expand."
     )
 with filter_row_1_col3:
+    # Prefill filter textbox with feature_group_filter_values (space-separated) if present
+    prefill_filter_text = " ".join(feature_group_filter_values) if 'feature_group_filter_values' in globals() and feature_group_filter_values else ""
     filter_text = st.text_input(
         "Filter Text Box",
-        "",
+        prefill_filter_text,
         placeholder="Search across all columns..."
     )
 with filter_row_1_col4:
     search_mode = st.radio(
         "Search Mode",
         ["OR", "AND"],
+        index=1,  # default to AND
         horizontal=True,
         help="OR: any word | AND: all words | add [col]_null or [col]_nnull for null/not null"
     )

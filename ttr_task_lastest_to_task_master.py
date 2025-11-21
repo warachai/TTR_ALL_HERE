@@ -28,18 +28,6 @@ DATA_DIR = config.OUTPUT_RAW_DIR
 TASK_STAGING_FILE = config.STAGING_FILE_PATH
 TASK_LATEST_FILE = config.LATEST_FILE_PATH
 TASK_CURRENT_FILE = config.TASK_CURRENT_FILE_PATH
-def _generate_new_task_id(existing_task_ids):
-    """Task_ID pattern: T-000001, T-000002, ..."""
-    nums = []
-    for tid in existing_task_ids:
-        if isinstance(tid, str) and tid.startswith("T-"):
-            try:
-                nums.append(int(tid.split("-")[1]))
-            except Exception:
-                pass
-    nxt = (max(nums) + 1) if nums else 1
-    return f"T-{nxt:06d}"
-
 
 def sync_task_latest_to_task_master():
     """
@@ -64,85 +52,8 @@ def sync_task_latest_to_task_master():
     if os.path.exists(config.TASK_MASTER_FILE):
         tm = pd.read_csv(config.TASK_MASTER_FILE)
     else:
-        tm = pd.DataFrame(columns=[
-            "Task_ID",          # internal
-            "Business_Key",     # Source|Program|Task_ID
-            "Source",
-            "Program",
-            "Task_ID_Source",
-            "Title",
-            "Improvement_Type",
-            "Status_Raw",
-            "Owner_Raw",
-            "Updated_TS_Raw",
-            "Last_Sync_TS",
-        ])
+        tm = pd.read_csv(config.TASK_LATEST_FILE)
 
-    # map Business_Key -> existing row index & Task_ID
-    key_to_index = {}
-    existing_ids = set(tm["Task_ID"]) if not tm.empty else set()
-
-    if not tm.empty:
-        for idx, row in tm.iterrows():
-            bk = row.get("Business_Key")
-            tid = row.get("Task_ID")
-            if isinstance(bk, str):
-                key_to_index[bk] = idx
-            if isinstance(tid, str):
-                existing_ids.add(tid)
-
-    now_str = datetime.utcnow().isoformat(timespec="seconds")
-
-    # upsert each latest row
-    for _, row in latest.iterrows():
-        bk   = row.get("Business_Key")
-        src  = row.get("Source", "")
-        prog = row.get("Program", "")
-        tid_src = row.get("Task_ID", "")
-        title   = row.get("Task_Name", "")
-        itype   = row.get("Improvement_Type", "")
-        status  = row.get("Status", "")
-        owner   = row.get("User_Name", "")
-        dt      = row.get("Date_Time", "")
-
-        if not isinstance(bk, str):
-            # skip malformed rows
-            continue
-
-        if bk in key_to_index:
-            # update existing row
-            idx = key_to_index[bk]
-            tm.at[idx, "Source"]          = src
-            tm.at[idx, "Program"]         = prog
-            tm.at[idx, "Task_ID_Source"]  = tid_src
-            tm.at[idx, "Title"]           = title
-            tm.at[idx, "Improvement_Type"] = itype
-            tm.at[idx, "Status_Raw"]      = status
-            tm.at[idx, "Owner_Raw"]       = owner
-            tm.at[idx, "Updated_TS_Raw"]  = dt
-            tm.at[idx, "Last_Sync_TS"]    = now_str
-        else:
-            # insert new
-            new_task_id = _generate_new_task_id(existing_ids)
-            existing_ids.add(new_task_id)
-            key_to_index[bk] = len(tm)
-
-            tm = pd.concat([
-                tm,
-                pd.DataFrame([{
-                    "Task_ID":          new_task_id,
-                    "Business_Key":     bk,
-                    "Source":           src,
-                    "Program":          prog,
-                    "Task_ID_Source":   tid_src,
-                    "Title":            title,
-                    "Improvement_Type": itype,
-                    "Status_Raw":       status,
-                    "Owner_Raw":        owner,
-                    "Updated_TS_Raw":   dt,
-                    "Last_Sync_TS":     now_str,
-                }])
-            ], ignore_index=True)
 
     tm.to_csv(config.TASK_MASTER_FILE, index=False)
     print(f"Synced task_latest -> task_master ({len(latest)} latest rows, {len(tm)} total tasks).")

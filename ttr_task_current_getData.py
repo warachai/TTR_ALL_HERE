@@ -33,7 +33,7 @@ FTP_HOST = '10.19.67.204'
 FTP_PATH = '/var/merlin/cfgs/Siyarat/DISC'
 FTP_USERNAME = 'merlin'
 FTP_PASSWORD = 'merlin'
-FTP_LOCAL_DIR = r'D:\work\project\project\Github\TTR_ALL_HERE\RawData'
+FTP_LOCAL_DIR = r'D:\work\project\project\Github\TTR_ALL_HERE\RAW\DISC'
 
 
 # ==============================================================================
@@ -43,8 +43,8 @@ JIRA_BASE_URL = 'https://jira.seagate.com'
 JIRA_API_ENDPOINT = '/jira/rest/api/2/search'
 JIRA_PROJECTS = ['SUMMIT', 'MARLINCT', 'MBP', 'DORADO', 'TSR']
 JIRA_FIELDS = 'key,summary,status,reporter,created,customfield_35600'
-JIRA_MAX_RESULTS = 50
-JIRA_OUTPUT_FILE = r'D:\work\project\project\Github\TTR_ALL_HERE\RawData\jira_issues.csv'
+JIRA_MAX_RESULTS = 25
+JIRA_OUTPUT_FILE = r'D:\work\project\project\Github\TTR_ALL_HERE\RAW\JIRA\jira_issues.csv'
 
 
 # ==============================================================================

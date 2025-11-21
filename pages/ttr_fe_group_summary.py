@@ -3,11 +3,14 @@
 import streamlit as st
 import pandas as pd
 import config
+from access_logging import log_access
 
 from streamlit import session_state as ss
 import uuid
 
 st.set_page_config(page_title="Feature Summary", layout="wide")
+# Log site access for this page
+log_access("fe_group_summary")
 
 # ---------------------------------------------------------
 # Dummy data – replace with your own
@@ -91,7 +94,33 @@ if 'Feature_Group' in df_filtered_tasks.columns:
                 )
             pivot_table = pivot_table[mask]
 
-    st.dataframe(pivot_table, use_container_width=True)
+    
+    # Fallback to simple HTML with links (minimal styling)
+    base = "http://10.7.194.231:8501/ttr_feature_form_group"
+    from urllib.parse import quote as _q
+    program_cols = [c for c in pivot_table.columns if c not in ("Feature_Group", "Total")]
+    html_rows = []
+    header = ["Feature_Group"] + program_cols + ["Total"]
+    html_rows.append("<tr>" + "".join(f"<th>{h}</th>" for h in header) + "</tr>")
+    for _, row in pivot_table.iterrows():
+        fg = row['Feature_Group']
+        row_cells = [f"<td>{fg}</td>"]
+        for prog in program_cols:
+            val = row[prog]
+            if val == 0:
+                row_cells.append(f"<td>{val}</td>")
+            else:
+                url = f"{base}?feature_group={_q(str(fg))}&program={_q(str(prog))}"
+                row_cells.append(f"<td><a href='{url}' target='_blank'>{val}</a></td>")
+        total_val = row['Total']
+        if total_val == 0:
+            row_cells.append(f"<td>{total_val}</td>")
+        else:
+            url_total = f"{base}?feature_group={_q(str(fg))}"
+            row_cells.append(f"<td><a href='{url_total}' target='_blank'>{total_val}</a></td>")
+        html_rows.append("<tr>" + "".join(row_cells) + "</tr>")
+    table_html = "<table>" + "".join(html_rows) + "</table>"
+    st.markdown(table_html, unsafe_allow_html=True)
 
     st.caption(f"Total rows: {len(pivot_table)}")
 else:
