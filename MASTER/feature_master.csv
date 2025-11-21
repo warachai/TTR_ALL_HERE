@@ -4491,7 +4491,7 @@ jira_issues,MARLIN,MARLINCT-1804,Resolved,,2025-02-21T05:50:23.000+0800,SMR VBAR
 jira_issues,MARLIN,MARLINCT-1805,Closed,,2025-02-21T06:49:33.000+0800,Release eval config for HSMR Wrt Pass removal ,Others,,          6) HSMR write pass rml (PWT intercept) - [PWT],,
 jira_issues,MARLIN,MARLINCT-1807,Resolved,,2025-02-22T01:29:01.000+0800,Marlin Write/Read Transfer Rate Reduction.,Others,,          4) W/R Xfer Sampling Test - [L][FIN2],,
 jira_issues,MARLIN,MARLINCT-1808,Resolved,,2025-02-22T02:15:12.000+0800,Disable Early sector BER measurement,Others,,,,
-jira_issues,MARLIN,MARLINCT-1809,Resolved,,2025-02-22T03:05:25.000+0800,Optimize Baud Rate for HSMR FILE100 Retrieval,Others,,          5) FIN2 HAMR file 100 polling optimization - [L][FIN2],,
+jira_issues,MARLIN,MARLINCT-1809,Resolved,,2025-02-22T03:05:25.000+0800,Optimize Baud Rate for HSMR FILE100 Retrieval,Others,,          5) FIN2 HAMR file 100 polling optimization - [L][FIN2],,Optimize Baud Rate for HAMR FILE100 Retrieval
 jira_issues,MARLIN,MARLINCT-1810,Resolved,,2025-02-22T07:15:45.000+0800,Release PCO 7.1.11E,Others,,,,
 jira_issues,MARLIN,MARLINCT-1811,Resolved,,2025-02-24T15:26:40.000+0800,Marlin request get summary table P_GROWN_DEFECT_LIST at FIN2,Others,,,,
 jira_issues,MARLIN,MARLINCT-1812,Resolved,,2025-02-25T03:03:41.000+0800,Write Process Restructuring update to remove CAL2 SF3_DPCO and VBAR WP states rerun update,Others,,,,
