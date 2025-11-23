@@ -59,7 +59,6 @@ def get_pco_options_for_config(program: str, config: str) -> list:
 # -------------------------------------------------------------------
 # Load and merge all DRV_INV.csv files from folder hierarchy
 # -------------------------------------------------------------------
-@st.cache_data
 def load_merged_drv_inv():
     """
     Recursively find all DRV_INV.csv files in test_time_folder.
@@ -71,12 +70,23 @@ def load_merged_drv_inv():
 
     # Print user selected config for debugging
     # Collect selected values into a dict for easier access
+    # Build selected map from current URL/query parameter defaults instead of session state
+    # so it reflects the user's explicit selections (user settings) rather than transient session values.
     selected = {}
+    params_local = st.query_params  # safe to call here; independent of later parsing
     for idx in range(3):
+        prog_raw = params_local.get(f"prog_{idx}", "NONE")
+        cfg_raw = params_local.get(f"cfg_{idx}", "NONE")
+        pco_raw = params_local.get(f"pco_{idx}", "NONE")
+        # Handle list values (Streamlit may store as list) and normalize
+        def _norm(v):
+            if isinstance(v, list):
+                return v[0] if v else "NONE"
+            return v if isinstance(v, str) else "NONE"
         selected[idx] = {
-            "program": st.session_state.get(f"prog_{idx}", "NONE"),
-            "config": st.session_state.get(f"cfg_{idx}", "NONE"),
-            "pco": st.session_state.get(f"pco_{idx}", "NONE"),
+            "program": _norm(prog_raw),
+            "config": _norm(cfg_raw),
+            "pco": _norm(pco_raw),
         }
 
     # Example: Check if path exists for each selected slot
@@ -258,11 +268,36 @@ with st.expander("Programs / Config / PCO", expanded=False):
 
         # Query Data button filters df_raw by selected slots (OR logic between the two)
         # Auto-query if URL params detected
-        query_btn_pressed = st.button("Query Data", key="query_data_btn", help="Filter data using selected Program/Config/PCO slots (NONE means no filter)")
+        query_btn_pressed = st.button(
+            "Query Data",
+            key="query_data_btn",
+            help="Apply current selections and update URL with non-NONE values"
+        )
         if query_btn_pressed:
-            # Clear previous filtered data so next block uses new selection
-            if "tt_filtered" in st.session_state:
-                del st.session_state.tt_filtered
+            # Build parameter dict from current live selections (user setting)
+            param_pairs = []
+            for idx, (prog, cfg, pco) in enumerate([sel1, sel2, sel3]):
+                if prog != "NONE":
+                    param_pairs.append((f"prog_{idx}", prog))
+                if cfg != "NONE":
+                    param_pairs.append((f"cfg_{idx}", cfg))
+                if pco != "NONE":
+                    param_pairs.append((f"pco_{idx}", pco))
+
+            # Update URL query params (new API if available, fallback to experimental)
+            try:
+                st.query_params.clear()
+                for k, v in param_pairs:
+                    st.query_params[k] = v
+            except Exception:
+                if param_pairs:
+                    st.experimental_set_query_params(**{k: v for k, v in param_pairs})
+                else:
+                    # Clear params if all NONE
+                    st.experimental_set_query_params()
+
+            # Clear previous filtered data so next block recomputes with new params
+            st.session_state.pop("tt_filtered", None)
             st.rerun()
         auto_query = has_query_params and "tt_filtered" not in st.session_state
 
@@ -361,7 +396,41 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
             aggfunc=["mean", "count"],
             fill_value=0
         )
+        # Flatten MultiIndex columns (mean_pco_config, count_pco_config)
+        if isinstance(df_view.columns, pd.MultiIndex):
+            flat_cols = []
+            for col_tuple in df_view.columns:
+                # col_tuple like (aggfunc, pco, config)
+                agg = str(col_tuple[0])
+                rest = [str(x) for x in col_tuple[1:] if str(x) and str(x) != 'None']
+                flat = agg + (('_' + '_'.join(rest)) if rest else '')
+                flat_cols.append(flat)
+            df_view.columns = flat_cols
         df_view.reset_index(inplace=True)
+
+        # Add TOTAL summary row (sum counts, weighted mean for means)
+        if not df_view.empty:
+            total_row = {}
+            for col in df_view.columns:
+                if col in ["program", "OPERATION"]:
+                    continue
+                if col.startswith("count_"):
+                    total_row[col] = df_view[col].sum()
+                elif col.startswith("mean_"):
+                    # Derive matching count column suffix
+                    suffix = col[len("mean_"):]
+                    count_col = f"count_{suffix}"
+                    if count_col in df_view.columns and df_view[count_col].sum() > 0:
+                        #total_row[col] = (df_view[col] * df_view[count_col]).sum() / df_view[count_col].sum()
+                        total_row[col] = (df_view[col]).sum() 
+                    else:
+                        total_row[col] = df_view[col].mean()
+                else:
+                    # Generic numeric sum or leave blank
+                    total_row[col] = df_view[col].sum() if pd.api.types.is_numeric_dtype(df_view[col]) else None
+            total_row["program"] = "ALL"
+            total_row["OPERATION"] = "ALL"
+            df_view = pd.concat([df_view, pd.DataFrame([total_row])], ignore_index=True)
     else:
         df_view = df_f
 
@@ -371,7 +440,7 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
     if "OPERATION" in df_view.columns:
         df_view["OPERATION"] = pd.Categorical(df_view["OPERATION"], categories=custom_order, ordered=True)
         df_view = df_view.sort_values("OPERATION")
-    st.dataframe(df_view, use_container_width=True, height=20*32)
+    st.dataframe(df_view, use_container_width=True, height=15*32)
 
 
 # -------------------------------------------------------------------
