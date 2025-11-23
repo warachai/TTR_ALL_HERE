@@ -9,6 +9,7 @@ from pathlib import Path
 import plotly.express as px
 import numpy as np
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+from st_aggrid.shared import JsCode
 
 from pages.ttr_feature_form import add_violin_labels
 
@@ -587,6 +588,102 @@ def apply_filter(df, text, logic="OR", search_cols=None):
             mask |= term_mask
     return df[mask]
 
+def apply_filter_flex(df, text, logic="OR", search_cols=None, col_alias=None):
+    """
+    Flexible text filter:
+
+    - Free terms (no ":") search across search_cols (or all columns if None).
+    - Column-specific terms use the syntax COL:VALUE, e.g. STATE:PASS OP:10
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+    text : str
+        User input string.
+    logic : "AND" or "OR"
+        How to combine multiple free terms.
+    search_cols : list[str] or None
+        Columns for free-text search. If None, uses all df.columns.
+    col_alias : dict[str,str] or None
+        Optional mapping from short names to real column names,
+        e.g. {"STATE": "STATE_NAME", "OP": "OPERATION"}.
+    """
+    import pandas as pd
+
+
+    if not text:
+        return df
+
+    if search_cols is None:
+        search_cols = list(df.columns)
+
+    if col_alias is None:
+        col_alias = {}
+
+    # -------------------------------------------------
+    # 1) Split into tokens: some may be COL:VALUE, others just VALUE
+    # -------------------------------------------------
+    tokens = [t.strip() for t in text.split() if t.strip()]
+    if not tokens:
+        return df
+
+    df_s = df.copy()
+    df_s = df_s.astype(str)
+
+    # separate into targeted (col:value) and free terms
+    targeted = []   # (column_name, value)
+    free_terms = [] # just values
+
+    for tok in tokens:
+        if ":" in tok:
+            key, val = tok.split(":", 1)
+            key = key.strip()
+            val = val.strip()
+            if not val:
+                continue
+            # map alias (e.g. "STATE" -> "STATE_NAME")
+            col = col_alias.get(key, key)
+            if col in df_s.columns:
+                targeted.append((col, val))
+        else:
+            free_terms.append(tok)
+
+    # -------------------------------------------------
+    # 2) Build mask for targeted column filters (all AND together)
+    # -------------------------------------------------
+    targeted_mask = None
+    for col, val in targeted:
+        m = df_s[col].str.contains(val, case=False, na=False)
+        targeted_mask = m if targeted_mask is None else (targeted_mask & m)
+
+    # -------------------------------------------------
+    # 3) Build mask for free terms across search_cols
+    # -------------------------------------------------
+    free_mask = None
+    if free_terms:
+        sub = df_s[search_cols]
+        for term in free_terms:
+            m = sub.apply(lambda c: c.str.contains(term, case=False, na=False)).any(axis=1)
+            if free_mask is None:
+                free_mask = m
+            elif logic == "AND":
+                free_mask &= m
+            else:  # "OR"
+                free_mask |= m
+
+    # -------------------------------------------------
+    # 4) Combine targeted + free
+    # -------------------------------------------------
+    if targeted_mask is not None and free_mask is not None:
+        final_mask = targeted_mask & free_mask  # both must match
+    elif targeted_mask is not None:
+        final_mask = targeted_mask
+    elif free_mask is not None:
+        final_mask = free_mask
+    else:
+        return df
+
+    return df[final_mask]
 
 def test_time_block(title, df, key_prefix, groupby_cols=None):
     st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
@@ -938,11 +1035,18 @@ with st.expander("Test Time By Test", expanded=True):
         df_test = load_merged_test_time_by_test().copy()
 
         c1_tt, c2_tt = st.columns(2)
+        col_alias = {
+            "STATE": "STATE_NAME",
+            "OP": "OPERATION",
+            "PARM": "PARAMETER_NAME",
+            "TEST": "TEST_NUMBER",
+        }
         with c1_tt:
             filter_text_tt_op_tt = st.text_input(
             "Filter Text Box",
             "",
             placeholder="Search in all columns...",
+            help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP TEST:275.\n- [STATE:STATE_NAME, OP:OPERATION, PARM:PARAMETER_NAME, TEST:TEST_NUMBER]",
             key="filter_text_tt_op_tt"
             )
 
@@ -957,14 +1061,23 @@ with st.expander("Test Time By Test", expanded=True):
         )
 
 
-        df_test = apply_filter(
+
+        df_test = apply_filter_flex(
             df_test,
             filter_text_tt_op_tt,
             logic_tt_op_tt,
-            ["program", "config", "pco", "STATE_NAME", "OPERATION", 'TEST_NUMBER', 'PARAMETER_NAME'],
+            [ "STATE_NAME", "OPERATION", 'TEST_NUMBER', 'PARAMETER_NAME'],
+            col_alias=col_alias
         )
         
         if not df_test.empty:
+            # Example: group by a column that exists, e.g. 'OPERATION' or 'STATE_NAME'
+            total_group_operation = df_test.groupby(["pco", "config"]).size().reset_index(name='count')
+            total_group_operation['GROUP_NAME'] = total_group_operation['pco'] + "_" + total_group_operation['config']
+            group_name_list = total_group_operation['GROUP_NAME'].tolist()
+
+            #st.write("all operations mmm:", group_name_list)
+
             tt_summary = df_test.pivot_table(
                     index=['TEST_NUMBER', 'PARAMETER_NAME',"STATE_NAME", "OPERATION"],
                     columns=["pco", "config"],
@@ -974,20 +1087,38 @@ with st.expander("Test Time By Test", expanded=True):
                 ).reset_index()
 
             # ---------------- Build AgGrid options ----------------
-            gb = GridOptionsBuilder.from_dataframe(tt_summary)
-
             tt_summary.columns = [
                 "_".join([str(c) for c in col]).strip("_") if isinstance(col, tuple) else col
                 for col in tt_summary.columns
             ]
+
+            # Replace column names containing 'TestTime(hrs)_' with ''
+            tt_summary.columns = [
+                col.replace('TestTime(hrs)_', 'TT_') if isinstance(col, str) else col
+                for col in tt_summary.columns
+            ]
+
+            test_time_cols = [c for c in tt_summary.columns if c.startswith("TT_")]
+
+            if len(test_time_cols) == 2:
+                tt_summary["TT_Diff"] = tt_summary[test_time_cols[0]] - tt_summary[test_time_cols[1]]
+
 
             # 2) Build AgGrid options
             gb = GridOptionsBuilder.from_dataframe(tt_summary)
 
             # group by TEST_NUMBER (now a plain string column name)
             gb.configure_column("TEST_NUMBER", rowGroup=True, hide=True)
+            gb.configure_column("PARAMETER_NAME", rowGroup=True, hide=True)
 
-            
+            if len(test_time_cols) == 2:
+                gb.configure_column('TT_Diff', aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
+
+            # Aggregation for numeric columns when grouped
+            for col in group_name_list:
+                gb.configure_column('TT_' + col, aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
+                gb.configure_column('N_' + col, aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
+
 
             # General grid options
             gb.configure_grid_options(
@@ -1000,14 +1131,59 @@ with st.expander("Test Time By Test", expanded=True):
             grid_options = gb.build()
 
             # ---------------- Render AgGrid ----------------
+            # grid_response = AgGrid(
+            #     tt_summary,
+            #     gridOptions=grid_options,
+            #     enable_enterprise_modules=True,
+            #     update_mode=GridUpdateMode.NO_UPDATE,
+            #     fit_columns_on_grid_load=True,
+            #     height=25*32,
+            # ) 
+
+            # Autosize columns after grid loads
+
+            # This JS code will autosize all columns after grid is ready
+            auto_size_js = JsCode("""
+            function(e) {
+                let gridApi = e.api;
+                gridApi.sizeColumnsToFit();
+            }
+            """)
+
+            # Render AgGrid with export button
             grid_response = AgGrid(
                 tt_summary,
                 gridOptions=grid_options,
                 enable_enterprise_modules=True,
                 update_mode=GridUpdateMode.NO_UPDATE,
                 fit_columns_on_grid_load=True,
-                height=420,
-            )      
+                height=25*32,
+                onGridReady=auto_size_js,
+                allow_unsafe_jscode=True,
+                custom_js=[
+                    JsCode("""
+                    function(e) {
+                        e.api.sizeColumnsToFit();
+                        e.api.gridOptions.api.gridOptionsWrapper.gridOptions.enableRangeSelection = true;
+                        e.api.gridOptions.api.gridOptionsWrapper.gridOptions.enableClipboard = true;
+                    }
+                    """)
+                ],
+                enableRangeSelection=True,
+                enableRowSelection=True,
+                rowSelection='multiple',
+                suppressRowClickSelection=False,
+            )
+
+            # Export button for filtered data
+            st.download_button(
+                label="Export to CSV",
+                data=tt_summary.to_csv(index=False).encode("utf-8"),
+                file_name="test_time_by_test.csv",
+                mime="text/csv",
+            )
+
+
         else:
             st.info("No filtered data available. Query data above to view state-wise test time.")
 
