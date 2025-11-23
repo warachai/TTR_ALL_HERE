@@ -1,4 +1,4 @@
-# http://localhost:8501/ttr_Test_Time_View?prog_0=SUMMIT&cfg_0=CMR&pco_0=PYTHON_374
+# http://localhost:8501/ttr_Test_Time_View?prog_0=SUMMIT&cfg_0=CMR&pco_0=PYTHON_374&prog_1=SUMMIT&cfg_1=CMR&pco_1=PYTHON_373
 # http://localhost:8501/ttr_Test_Time_View?prog_0=MARLIN&cfg_0=SMR&pco_0=PCO2&prog_1=DORADO&cfg_1=HSMR&pco_1=PCO3
 
 import streamlit as st
@@ -68,6 +68,27 @@ def load_merged_drv_inv():
     Merge all into single dataframe.
     """
     dfs = []
+
+    # Print user selected config for debugging
+    # Collect selected values into a dict for easier access
+    selected = {}
+    for idx in range(3):
+        selected[idx] = {
+            "program": st.session_state.get(f"prog_{idx}", "NONE"),
+            "config": st.session_state.get(f"cfg_{idx}", "NONE"),
+            "pco": st.session_state.get(f"pco_{idx}", "NONE"),
+        }
+
+    # Example: Check if path exists for each selected slot
+    user_selected = []
+    for idx, sel in selected.items():
+        prog, cfg, pco = sel["program"], sel["config"], sel["pco"]
+        if prog != "NONE" and cfg != "NONE" and pco != "NONE":
+            path = os.path.join(test_time_folder, prog, cfg, pco, "DRV_INV.csv")
+            if path not in user_selected:
+                user_selected.append(path)
+            st.write("path :",path)
+
     
     for root, dirs, files in os.walk(test_time_folder):
         if "DRV_INV.csv" in files:
@@ -76,8 +97,10 @@ def load_merged_drv_inv():
             # Extract hierarchy from path: R:\Test_Time_Hist\{program}\{config}\{pco}\DRV_INV.csv
             rel_path = os.path.relpath(filepath, test_time_folder)
             parts = rel_path.split(os.sep)
+
+
             
-            if len(parts) >= 4:  # program/config/pco/filename
+            if filepath in user_selected:  # program/config/pco/filename
                 try:
                     df = pd.read_csv(filepath)
                     # Add the three hierarchy columns at the front
@@ -236,6 +259,11 @@ with st.expander("Programs / Config / PCO", expanded=False):
         # Query Data button filters df_raw by selected slots (OR logic between the two)
         # Auto-query if URL params detected
         query_btn_pressed = st.button("Query Data", key="query_data_btn", help="Filter data using selected Program/Config/PCO slots (NONE means no filter)")
+        if query_btn_pressed:
+            # Clear previous filtered data so next block uses new selection
+            if "tt_filtered" in st.session_state:
+                del st.session_state.tt_filtered
+            st.rerun()
         auto_query = has_query_params and "tt_filtered" not in st.session_state
 
         if query_btn_pressed or auto_query:
@@ -270,7 +298,7 @@ with st.expander("Programs / Config / PCO", expanded=False):
 # -------------------------------------------------------------------
 # Filter helpers
 # -------------------------------------------------------------------
-def apply_filter(df, text, logic="AND", search_cols=None):
+def apply_filter(df, text, logic="OR", search_cols=None):
     if not text:
         return df
     if search_cols is None:
@@ -325,28 +353,36 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
     )
 
     if groupby_cols:
-        # Use DataFrameGroupBy for named aggregations; SeriesGroupBy rejects (col, func) tuples
-        df_view = (
-            df_f.groupby(groupby_cols)
-            .agg(
-                Count=("TEST_TIME", "size"),
-                Avg=("TEST_TIME", "mean"),
-                Sum=("TEST_TIME", "sum"),
-            )
-            .reset_index()
+        # Create pivot table with specified rows, columns, and values
+        df_view = df_f.pivot_table(
+            index=["program", "OPERATION"],
+            columns=["pco", "config"],
+            values="TEST_TIME",
+            aggfunc=["mean", "count"],
+            fill_value=0
         )
+        df_view.reset_index(inplace=True)
     else:
         df_view = df_f
 
     
-
-    st.dataframe(df_view, use_container_width=True, height=160)
+    # Order df_view OPERATION column by custom order if present
+    custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+    if "OPERATION" in df_view.columns:
+        df_view["OPERATION"] = pd.Categorical(df_view["OPERATION"], categories=custom_order, ordered=True)
+        df_view = df_view.sort_values("OPERATION")
+    st.dataframe(df_view, use_container_width=True, height=20*32)
 
 
 # -------------------------------------------------------------------
 # Middle: Test Time
+# title, df, key_prefix, groupby_cols=None
 # -------------------------------------------------------------------
-test_time_block("Test Time", df_raw, "tt_overall")
+df_raw['TEST_TIME'] = pd.to_numeric(df_raw['TEST_TIME'], errors='coerce').fillna(0)
+df_raw['TEST_TIME_org'] = pd.to_numeric(df_raw['TEST_TIME'], errors='coerce').fillna(0)
+df_raw['TEST_TIME'] = df_raw['TEST_TIME'] / 3600
+test_time_block("Test Time", df_raw, "tt_overall", groupby_cols=["program", "config", "pco", "Category"])
+
 
 st.markdown("---")
 
