@@ -1,5 +1,6 @@
 # http://localhost:8501/ttr_Test_Time_View?prog_0=SUMMIT&cfg_0=CMR&pco_0=PYTHON_374&prog_1=SUMMIT&cfg_1=CMR&pco_1=PYTHON_373
 # http://localhost:8501/ttr_Test_Time_View?prog_0=MARLIN&cfg_0=SMR&pco_0=PCO2&prog_1=DORADO&cfg_1=HSMR&pco_1=PCO3
+# http://localhost:8501/ttr_Test_Time_Compare_View?prog_0=SUMMIT&cfg_0=CMR&pco_0=PYTHON_373&prog_1=SUMMIT&cfg_1=CMR&pco_1=PYTHON_374
 
 import streamlit as st
 import pandas as pd
@@ -7,6 +8,7 @@ import os
 from pathlib import Path
 import plotly.express as px
 import numpy as np
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 from pages.ttr_feature_form import add_violin_labels
 
@@ -118,7 +120,97 @@ def get_pco_options_for_config(program: str, config: str) -> list:
     except Exception as e:
         st.debug(f"Error scanning PCOs for {program}/{config}: {e}")
         return ["NONE"]
+# -------------------------------------------------------------------
+# Load and merge all DRV_INV.csv files from folder hierarchy
+# -------------------------------------------------------------------
+def load_merged_test_time_by_test():
+    """
+    Recursively find all TEST_TIME_BY_STATE_ALL_sum.csv files in test_time_folder.
+    Read each file and add program, config, pco columns based on folder path.
+    Map DRV_INV columns to filter-compatible names.
+    Merge all into single dataframe.
+    """
+    dfs = []
 
+    source_file = "TEST_TIME_BY_TEST_ALL_sum_operation_summary.csv"
+
+    # Print user selected config for debugging
+    # Collect selected values into a dict for easier access
+    # Build selected map from current URL/query parameter defaults instead of session state
+    # so it reflects the user's explicit selections (user settings) rather than transient session values.
+    selected = {}
+    params_local = st.query_params  # safe to call here; independent of later parsing
+    for idx in range(2):
+        prog_raw = params_local.get(f"prog_{idx}", "NONE")
+        cfg_raw = params_local.get(f"cfg_{idx}", "NONE")
+        pco_raw = params_local.get(f"pco_{idx}", "NONE")
+        # Handle list values (Streamlit may store as list) and normalize
+        def _norm(v):
+            if isinstance(v, list):
+                return v[0] if v else "NONE"
+            return v if isinstance(v, str) else "NONE"
+        selected[idx] = {
+            "program": _norm(prog_raw),
+            "config": _norm(cfg_raw),
+            "pco": _norm(pco_raw),
+        }
+
+    # Example: Check if path exists for each selected slot
+    user_selected = []
+    for idx, sel in selected.items():
+        prog, cfg, pco = sel["program"], sel["config"], sel["pco"]
+        if prog != "NONE" and cfg != "NONE" and pco != "NONE":
+            path = os.path.join(test_time_folder, prog, cfg, pco, source_file)
+            if path not in user_selected:
+                user_selected.append(path)
+            #st.write("path :",path)
+
+    
+    for root, dirs, files in os.walk(test_time_folder):
+        if source_file in files:
+            filepath = os.path.join(root, source_file)
+            
+            # Extract hierarchy from path: R:\Test_Time_Hist\{program}\{config}\{pco}\DRV_INV.csv
+            rel_path = os.path.relpath(filepath, test_time_folder)
+            parts = rel_path.split(os.sep)
+
+
+            
+            if filepath in user_selected:  # program/config/pco/filename
+                try:
+                    df = pd.read_csv(filepath)
+                    # Add the three hierarchy columns at the front
+                    df.insert(0, "program", parts[0])
+                    df.insert(1, "config", parts[1])
+                    df.insert(2, "pco", parts[2])
+                    
+                    # Map DRV_INV columns to filter-compatible names
+                    # Use OPERATION as Category, SUB_BUILD_GROUP as SubCat for filtering
+                    if "OPERATION" in df.columns:
+                        df["Category"] = df["OPERATION"]
+                    if "SUB_BUILD_GROUP" in df.columns:
+                        df["SubCat"] = df["SUB_BUILD_GROUP"]
+                    
+                    dfs.append(df)
+                except Exception as e:
+                    st.warning(f"Could not load {filepath}: {e}")
+    
+    if dfs:
+        merged_df = pd.concat(dfs, ignore_index=True)
+        return merged_df
+    else:
+        # Fallback to example data if no DRV_INV.csv files found
+        #st.warning("No DRV_INV.csv files found. Using example data.")
+        data = {
+            "program":  ["SUMMIT"] * 4 + ["MARLIN"] * 4 + ["MARLIN"] * 4,
+            "config":   ["CMR"] * 4 + ["SMR"] * 4 + ["HSMR"] * 4,
+            "pco":      ["PYTHON_373"] * 4 + ["PCO2"] * 4 + ["PCO3"] * 4,
+            "Category": ["CatA", "CatB", "CatC", "CatA"] * 3,
+            "SubCat":   ["SC1", "SC2", "SC3", "SC4"] * 3,
+            "TEST_TIME": [10, 12, 20, 16, 9, 11, 14, 13, 8, 10, 15, 18],
+        }
+        return pd.DataFrame(data)
+  
 # -------------------------------------------------------------------
 # Load and merge all DRV_INV.csv files from folder hierarchy
 # -------------------------------------------------------------------
@@ -720,7 +812,7 @@ st.markdown("---")
 # -------------------------------------------------------------------
 # Bottom: Test Time By State
 # -------------------------------------------------------------------
-with st.expander("Test Time Distribution", expanded=True):
+with st.expander("Test Time By State", expanded=False):
     
     st.markdown('<div class="section-title">Test Time By State</div>', unsafe_allow_html=True)
 
@@ -735,7 +827,7 @@ with st.expander("Test Time Distribution", expanded=True):
             "Filter Text Box",
             "",
             placeholder="Search in all columns...",
-            key="filter_text_tt_op_tt"
+            key="filter_text_tt_op_tt_test"
             )
 
         with c2_tt:
@@ -744,7 +836,7 @@ with st.expander("Test Time Distribution", expanded=True):
             ["OR", "AND"],
             horizontal=True,
             help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
-            key="logic_tt"
+            key="logic_tt_test"
             
         )
 
@@ -836,4 +928,86 @@ with st.expander("Test Time Distribution", expanded=True):
             st.info("No filtered data available. Query data above to view state-wise test time.")
 
 
+with st.expander("Test Time By Test", expanded=True):
+    
+    st.markdown('<div class="section-title">Test Time By Test</div>', unsafe_allow_html=True)
+
+    if not has_query_params:
+        st.info("No query parameters provided. Please select filters above.")
+    else:
+        df_test = load_merged_test_time_by_test().copy()
+
+        c1_tt, c2_tt = st.columns(2)
+        with c1_tt:
+            filter_text_tt_op_tt = st.text_input(
+            "Filter Text Box",
+            "",
+            placeholder="Search in all columns...",
+            key="filter_text_tt_op_tt"
+            )
+
+        with c2_tt:
+            logic_tt_op_tt = st.radio(
+            "Search Mode",
+            ["OR", "AND"],
+            horizontal=True,
+            help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
+            key="logic_tt_op_tt"
+            
+        )
+
+
+        df_test = apply_filter(
+            df_test,
+            filter_text_tt_op_tt,
+            logic_tt_op_tt,
+            ["program", "config", "pco", "STATE_NAME", "OPERATION", 'TEST_NUMBER', 'PARAMETER_NAME'],
+        )
+        
+        if not df_test.empty:
+            tt_summary = df_test.pivot_table(
+                    index=['TEST_NUMBER', 'PARAMETER_NAME',"STATE_NAME", "OPERATION"],
+                    columns=["pco", "config"],
+                    values=["TestTime(hrs)", "N"],
+                    aggfunc={"TestTime(hrs)": "sum", "N": "sum"},
+                    fill_value=0
+                ).reset_index()
+
+            # ---------------- Build AgGrid options ----------------
+            gb = GridOptionsBuilder.from_dataframe(tt_summary)
+
+            tt_summary.columns = [
+                "_".join([str(c) for c in col]).strip("_") if isinstance(col, tuple) else col
+                for col in tt_summary.columns
+            ]
+
+            # 2) Build AgGrid options
+            gb = GridOptionsBuilder.from_dataframe(tt_summary)
+
+            # group by TEST_NUMBER (now a plain string column name)
+            gb.configure_column("TEST_NUMBER", rowGroup=True, hide=True)
+
+            
+
+            # General grid options
+            gb.configure_grid_options(
+                groupDisplayType="multipleColumns",  # show group columns instead of hiding
+                groupDefaultExpanded=0,              # 0 = collapsed, -1 = fully expanded
+                animateRows=True,
+                suppressAggFuncInHeader=False,
+            )
+
+            grid_options = gb.build()
+
+            # ---------------- Render AgGrid ----------------
+            grid_response = AgGrid(
+                tt_summary,
+                gridOptions=grid_options,
+                enable_enterprise_modules=True,
+                update_mode=GridUpdateMode.NO_UPDATE,
+                fit_columns_on_grid_load=True,
+                height=420,
+            )      
+        else:
+            st.info("No filtered data available. Query data above to view state-wise test time.")
 
