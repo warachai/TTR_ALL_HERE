@@ -1,7 +1,7 @@
 
 cd D:\work\project\project\Github\TTR_ALL_HERE
 d:
-REM python ttr_task_current_getData.py
+python ttr_task_current_getData.py
 python ttr_task_current_mergeData.py
 cd D:\work\project\project\Github\TTR_ALL_HERE\logic
 d:

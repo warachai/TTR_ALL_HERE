@@ -16,7 +16,7 @@ log_access("fe_group_summary")
 # Dummy data – replace with your own
 # ---------------------------------------------------------
 
-default_programs = ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT"]
+default_programs = ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT", "TSR"]
 # Load data (will reload when session state changes)
 current_tasks = pd.read_csv(config.FEATURE_MASTER_FILE)
 
@@ -41,6 +41,7 @@ with c2:
     search_mode = st.radio(
         "Search Mode",
         ["OR", "AND"],
+        index=1,  # default to AND
         horizontal=True,
         help="OR: Match any word | AND: Match all words, [col]_null to search for null values"
     )
@@ -94,7 +95,6 @@ if 'Feature_Group' in df_filtered_tasks.columns:
                 )
             pivot_table = pivot_table[mask]
 
-    
     # Fallback to simple HTML with links (minimal styling)
     base = "http://10.7.194.231:8501/ttr_feature_form_group"
     from urllib.parse import quote as _q
@@ -125,3 +125,9 @@ if 'Feature_Group' in df_filtered_tasks.columns:
     st.caption(f"Total rows: {len(pivot_table)}")
 else:
     st.warning("Column 'Feature_Group' not found; pivot cannot be generated.")
+
+
+with st.expander("", expanded=False):
+    # Display the pivot table as a dataframe
+    st.dataframe(pivot_table, use_container_width=True)
+    

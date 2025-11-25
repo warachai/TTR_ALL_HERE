@@ -739,6 +739,9 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
             df_view.columns = flat_cols
         df_view.reset_index(inplace=True)
 
+
+                # If exactly two TestTime columns, compute diff (first minus second)
+
         # Add TOTAL summary row (sum counts, weighted mean for means)
         if not df_view.empty:
             total_row = {}
@@ -762,6 +765,10 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
             total_row["program"] = "ALL"
             total_row["OPERATION"] = "ALL"
             df_view = pd.concat([df_view, pd.DataFrame([total_row])], ignore_index=True)
+
+            tt_cols = [c for c in df_view.columns if c.startswith("mean_")]
+            if len(tt_cols) == 2:
+                df_view["diff_TestTime(hrs)"] = df_view[tt_cols[0]] - df_view[tt_cols[1]]            
     else:
         df_view = df_f
 
@@ -1046,7 +1053,7 @@ with st.expander("Test Time By Test", expanded=True):
             "Filter Text Box",
             "",
             placeholder="Search in all columns...",
-            help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP TEST:275.\n- [STATE:STATE_NAME, OP:OPERATION, PARM:PARAMETER_NAME, TEST:TEST_NUMBER]",
+            help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP TEST:275\n- [STATE:STATE_NAME, OP:OPERATION, PARM:PARAMETER_NAME, TEST:TEST_NUMBER]",
             key="filter_text_tt_op_tt"
             )
 
