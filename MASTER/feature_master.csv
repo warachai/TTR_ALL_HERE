@@ -13985,7 +13985,7 @@ jira_issues,TSR,TSR-6928,Development,,2025-11-13T17:31:07.000+0800,SUMMIT SMR iV
 jira_issues,TSR,TSR-6929,New Request,,2025-11-13T23:03:35.000+0800,Bank Write to be added to LASER Burn in Test Process for both Dorado and MBP,Others,,,,
 jira_issues,TSR,TSR-6930,New Request,,2025-11-13T23:58:44.000+0800,Test 118 TTR: Remove unused Local Variables and associated code.,Others,,,,
 jira_issues,TSR,TSR-6931,New Request,,2025-11-14T05:28:37.000+0800,F3 Pre-Submit Validation - FWSD-13096,Others,,,,
-jira_issues,TSR,TSR-6932,New Request,,2025-11-14T06:33:19.000+0800,Improve CHROME and ZAP Transfer Functions,Others,,,,Xfer Func TTR
+jira_issues,TSR,TSR-6932,New Request,,2025-11-14T06:33:19.000+0800,Improve CHROME and ZAP Transfer Functions,Others,,,,non-linear-Xfer Func TTR
 jira_issues,TSR,TSR-6933,Development Completed,,2025-11-14T18:26:26.000+0800,Test 220 SME - Fix a failure mode issue tied to removal of Enhanced VBAR Opti,Others,,,,
 jira_issues,TSR,TSR-6934,Development Completed,,2025-11-14T23:10:06.000+0800,T348; Give option to report higher resolution bolo data at beginning of track,Others,,,,
 jira_issues,TSR,TSR-6935,New Request,,2025-11-15T05:31:09.000+0800,TCG_PREP: TA2 Certificate Provisioning PF3 Implementation,Others,,,,
