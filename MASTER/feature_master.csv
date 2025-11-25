@@ -56,7 +56,7 @@ jira_issues,MARLIN BP,MBP-1916,In Progress,Billy Aas,2025-10-21T22:30:49.000+080
 jira_issues,DORADO,DORADO-1369,Resolved,Unassigned,2025-11-14T03:10:26.000+0800,Release PCO 4.4.2,TTR,,,,
 jira_issues,DORADO,DORADO-1368,Open,Unassigned,2025-11-14T00:32:24.000+0800,Dorado 2 C9 Wafer CFR Assessment Plus Soak Reduction ,TTR,,,,
 jira_issues,DORADO,DORADO-1361,Resolved,Unassigned,2025-11-12T05:44:41.000+0800,Pull in TSR-6419 for Dorado 2 Heads,TTR,,,,
-jira_issues,DORADO,DORADO-1349,In Progress,Allen Tseng,2025-11-06T04:42:19.000+0800,TTR - T282 supports on single rate sensitivity scoring and combined BODE,TTR,,,,Bode single rate 
+jira_issues,DORADO,DORADO-1349,In Progress,Allen Tseng,2025-11-06T04:42:19.000+0800,TTR - T282 supports on single rate sensitivity scoring and combined BODE,TTR,,,,Bode C0 single rate
 jira_issues,DORADO,DORADO-1345,Open,Unassigned,2025-11-05T05:43:37.000+0800,Dorado Sea-POT (SeaPot),TTR,,,,
 jira_issues,DORADO,DORADO-1335,Resolved,Allen Tseng,2025-10-29T21:28:16.000+0800,10krpm eval at SPIN oper on Dorado,TTR,,,,10krpm eval at SPIN oper 
 jira_issues,DORADO,DORADO-1332,Resolved,Mihir Sathe,2025-10-29T02:13:10.000+0800,Add Hd screen specs of T297 checkerboard Tests,TTR,,,,
@@ -216,15 +216,15 @@ DISC,SUMMIT,CR0013538,Completed,Gronggaew Boonjuang,3/17/2025 19:04,Enable TTR P
 DISC,SUMMIT,CR0013539,Completed,Gronggaew Boonjuang,3/17/2025 20:23,POML SMR for Reli qual,TTR,,,,
 DISC,SUMMIT,CR0013541,Completed,Gronggaew Boonjuang,3/17/2025 21:59,TTR: MSMR dual reader test by condition (from single reader),TTR,,,,
 DISC,SUMMIT,CR0013553,Completed,Gronggaew Boonjuang,3/20/2025 16:07,DOE of T451 LC_DELAY_SDW step size 2->4 (SUMMIT-1545),TTR,,,,
-DISC,MARLIN,CR0013564,Completed,Worawit Kanjanapruthipong,3/24/2025 12:29,T282 TTR : C0 sensitivity scoring single-rate,TTR,,,,Bode single rate 
+DISC,MARLIN,CR0013564,Completed,Worawit Kanjanapruthipong,3/24/2025 12:29,T282 TTR : C0 sensitivity scoring single-rate,TTR,,,,Bode C0 single rate
 DISC,SUMMIT,CR0013565,Completed,Sitthichai Pomthong,3/24/2025 15:17,Summit: ATI write optimization in WP version2 version2,TTR,,,,
 DISC,SUMMIT,CR0013570,Completed,Worawit Kanjanapruthipong,3/25/2025 15:08,POML SMR model v.2,TTR,,,,
 DISC,SUMMIT,CR0013573,Completed,Gronggaew Boonjuang,3/25/2025 22:09,TTR: T451 increase step size from 2 to 4 for LC_DELAY_SDW ( register ID 2164) for test time saving for all T451,TTR,,,,
 DISC,MARLIN,CR0013579,Completed,Petcharat Boonprasop,3/26/2025 18:24,ProZ P90 improvement : Improve TA skip track handling during find min OD track revision 2,TTR,,,,
-DISC,MARLIN BP,CR0013587,Completed,Worawit Kanjanapruthipong,3/28/2025 17:16,T282 TTR : C0 sensitivity scoring single-rate,TTR,,,,Bode single rate 
+DISC,MARLIN BP,CR0013587,Completed,Worawit Kanjanapruthipong,3/28/2025 17:16,T282 TTR : C0 sensitivity scoring single-rate,TTR,,,,Bode C0 single rate
 DISC,SUMMIT,CR0013591,Completed,Gronggaew Boonjuang,3/28/2025 23:38,ProZ : P90/Test time reduction improvement,TTR,,,,
 DISC,SUMMIT,CR0013592,Completed,Gronggaew Boonjuang,3/29/2025 0:03, Enable T451 TTR optimized registers for T438 uJog for PK1,TTR,,,,
-DISC,SUMMIT,CR0013593,Completed,Worawit Kanjanapruthipong,3/30/2025 23:28,T282 TTR : C0 sensitivity scoring single-rate,TTR,,,,Bode single rate 
+DISC,SUMMIT,CR0013593,Completed,Worawit Kanjanapruthipong,3/30/2025 23:28,T282 TTR : C0 sensitivity scoring single-rate,TTR,,,,Bode C0 single rate
 DISC,SUMMIT,CR0013597,Completed,Kriangkrai Kuskul,3/31/2025 11:34,Summit : T285 DRCM optimize iteration,TTR,,,,DRCM iteration step 8
 DISC,MARLIN,CR0013599,Completed,Kriangkrai Kuskul,4/1/2025 10:24,Marlin : ProZ reduce overhead in TA skip track scan by Binary search,TTR,,,,
 DISC,MARLIN,CR0013601,Completed,phitpasu pinpirom,4/1/2025 11:07,Marlin enable SCOPY sniff test 7.2.03,TTR,,,,
@@ -250,7 +250,7 @@ DISC,SUMMIT,CR0013732,Completed,Daranee Thitiprayoonwongse,5/15/2025 17:02,SUMMI
 DISC,SUMMIT,CR0013734,Completed,Pantamit  Sombaddee,5/16/2025 12:25,TTR - 150x to 1 Read/Write Channel Speed up,TTR,,,,
 DISC,SUMMIT,CR0013735,Completed,Manuschanok  Srikhrueadong,5/16/2025 14:21,SUMMIT: TTR Disable States for weld before CERT,TTR,,,,
 DISC,SUMMIT,CR0013755,Completed,Gronggaew Boonjuang,5/23/2025 1:06,Skip Track Certify: Potential fix available for the Flash LED,TTR,,,,
-DISC,MARLIN BP,CR0013770,Completed,Worawit Kanjanapruthipong,5/28/2025 14:46,T282 TTR : C0 sensitivity scoring single-rate plus condition,TTR,,,,Bode single rate 
+DISC,MARLIN BP,CR0013770,Completed,Worawit Kanjanapruthipong,5/28/2025 14:46,T282 TTR : C0 sensitivity scoring single-rate plus condition,TTR,,,,Bode C0 single rate
 DISC,SUMMIT,CR0013773,Completed,Gronggaew Boonjuang,5/29/2025 14:13,Summit PROZ w. PRE2 Weld requested changes,TTR,,,,
 DISC,MARLIN,CR0013775,Rejected at Distribution,Petcharat Boonprasop,5/29/2025 15:06,"ProZ TTR op : Optimize TA skip track searching with binary search (LinearSearch, BinarySearch)",TTR,,,,
 DISC,SUMMIT,CR0013777,Completed,Phanom Nuangchomphoo,5/29/2025 16:14,Move OD PAD MQM to prior Format,TTR,,,,
@@ -264,7 +264,7 @@ DISC,SUMMIT,CR0013806,Completed,Sitthichai Pomthong,6/10/2025 14:51,Summit: Fast
 DISC,SUMMIT,CR0013812,Completed,Kriangkrai Kuskul,6/11/2025 15:33,ProZ SMR : Close reli failure evaluation,TTR,,,,
 DISC,SUMMIT,CR0013817,Rejected at Distribution,Kriangkrai Kuskul,6/12/2025 11:52,Summit : ProZ mimo end pad track code fix + disable ZAP spike compensation,TTR,,,,
 DISC,SUMMIT,CR0013819,Completed,Orathai Kajhonkam,6/12/2025 17:42,SUMMIT Engineering Eval for Summit LC TTR: PF3 for T282 C0 sensitivity scoring from multi-rate to single-rate by condition,TTR,,,,
-DISC,MARLIN BP,CR0013828,Completed,Naruporn Srikullabut,6/13/2025 15:52,T282 TTR : C0 sensitivity scoring single-rate plus condition for Trident 3.2,TTR,,,,Bode single rate 
+DISC,MARLIN BP,CR0013828,Completed,Naruporn Srikullabut,6/13/2025 15:52,T282 TTR : C0 sensitivity scoring single-rate plus condition for Trident 3.2,TTR,,,,Bode C0 single rate
 DISC,MARLIN BP,CR0013835,Completed,Warat  Jintanamaneerat ,6/16/2025 17:23,MarlinBP TTR Recover CAL2 FULL_PACK_WRT PWL by head,TTR,,,,
 DISC,DORADO,CR0013843,Completed,Kriangkrai Kuskul,6/19/2025 10:52,Dorado : Overhead reduction in LASER_TCC CAL,TTR,,,,
 DISC,SUMMIT,CR0013846,Completed,Worawit Kanjanapruthipong,6/19/2025 16:17,T282 TTR : Bode Convergence Check,TTR,,,,Bode convergence
