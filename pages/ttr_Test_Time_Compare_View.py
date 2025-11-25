@@ -11,7 +11,6 @@ import numpy as np
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from st_aggrid.shared import JsCode
 
-from pages.ttr_feature_form import add_violin_labels
 
 st.set_page_config(page_title="Test Time View", layout="wide")
 
@@ -302,7 +301,98 @@ def load_merged_test_time_by_state():
             "TEST_TIME": [10, 12, 20, 16, 9, 11, 14, 13, 8, 10, 15, 18],
         }
         return pd.DataFrame(data)
+
+# -------------------------------------------------------------------
+# Load and merge all DRV_INV.csv files from folder hierarchy
+# -------------------------------------------------------------------
+def load_merged_test_time_by_state_detail():
+    """
+    Recursively find all TEST_TIME_BY_STATE_ALL_sum.csv files in test_time_folder.
+    Read each file and add program, config, pco columns based on folder path.
+    Map DRV_INV columns to filter-compatible names.
+    Merge all into single dataframe.
+    """
+    dfs = []
+
+    source_file = "TEST_TIME_BY_STATE_ALL_sum.csv"
+
+    # Print user selected config for debugging
+    # Collect selected values into a dict for easier access
+    # Build selected map from current URL/query parameter defaults instead of session state
+    # so it reflects the user's explicit selections (user settings) rather than transient session values.
+    selected = {}
+    params_local = st.query_params  # safe to call here; independent of later parsing
+    for idx in range(2):
+        prog_raw = params_local.get(f"prog_{idx}", "NONE")
+        cfg_raw = params_local.get(f"cfg_{idx}", "NONE")
+        pco_raw = params_local.get(f"pco_{idx}", "NONE")
+        # Handle list values (Streamlit may store as list) and normalize
+        def _norm(v):
+            if isinstance(v, list):
+                return v[0] if v else "NONE"
+            return v if isinstance(v, str) else "NONE"
+        selected[idx] = {
+            "program": _norm(prog_raw),
+            "config": _norm(cfg_raw),
+            "pco": _norm(pco_raw),
+        }
+
+    # Example: Check if path exists for each selected slot
+    user_selected = []
+    for idx, sel in selected.items():
+        prog, cfg, pco = sel["program"], sel["config"], sel["pco"]
+        if prog != "NONE" and cfg != "NONE" and pco != "NONE":
+            path = os.path.join(test_time_folder, prog, cfg, pco, source_file)
+            if path not in user_selected:
+                user_selected.append(path)
+            #st.write("path :",path)
+
     
+    for root, dirs, files in os.walk(test_time_folder):
+        if source_file in files:
+            filepath = os.path.join(root, source_file)
+            
+            # Extract hierarchy from path: R:\Test_Time_Hist\{program}\{config}\{pco}\DRV_INV.csv
+            rel_path = os.path.relpath(filepath, test_time_folder)
+            parts = rel_path.split(os.sep)
+
+
+            
+            if filepath in user_selected:  # program/config/pco/filename
+                try:
+                    df = pd.read_csv(filepath)
+                    # Add the three hierarchy columns at the front
+                    df.insert(0, "program", parts[0])
+                    df.insert(1, "config", parts[1])
+                    df.insert(2, "pco", parts[2])
+                    
+                    # Map DRV_INV columns to filter-compatible names
+                    # Use OPERATION as Category, SUB_BUILD_GROUP as SubCat for filtering
+                    if "OPERATION" in df.columns:
+                        df["Category"] = df["OPERATION"]
+                    if "SUB_BUILD_GROUP" in df.columns:
+                        df["SubCat"] = df["SUB_BUILD_GROUP"]
+                    
+                    dfs.append(df)
+                except Exception as e:
+                    st.warning(f"Could not load {filepath}: {e}")
+    
+    if dfs:
+        merged_df = pd.concat(dfs, ignore_index=True)
+        return merged_df
+    else:
+        # Fallback to example data if no DRV_INV.csv files found
+        #st.warning("No DRV_INV.csv files found. Using example data.")
+        data = {
+            "program":  ["SUMMIT"] * 4 + ["MARLIN"] * 4 + ["MARLIN"] * 4,
+            "config":   ["CMR"] * 4 + ["SMR"] * 4 + ["HSMR"] * 4,
+            "pco":      ["PYTHON_373"] * 4 + ["PCO2"] * 4 + ["PCO3"] * 4,
+            "Category": ["CatA", "CatB", "CatC", "CatA"] * 3,
+            "SubCat":   ["SC1", "SC2", "SC3", "SC4"] * 3,
+            "TEST_TIME": [10, 12, 20, 16, 9, 11, 14, 13, 8, 10, 15, 18],
+        }
+        return pd.DataFrame(data)
+      
 # -------------------------------------------------------------------
 # Load and merge all DRV_INV.csv files from folder hierarchy
 # -------------------------------------------------------------------
@@ -721,8 +811,8 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
     if groupby_cols:
         # Create pivot table with specified rows, columns, and values
         df_view = df_f.pivot_table(
-            index=["program", "OPERATION"],
-            columns=["pco", "config"],
+            index=[ "OPERATION"],
+            columns=["program","pco", "config"],
             values="TEST_TIME",
             aggfunc=["mean", "count"],
             fill_value=0
@@ -746,7 +836,7 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
         if not df_view.empty:
             total_row = {}
             for col in df_view.columns:
-                if col in ["program", "OPERATION"]:
+                if col in [ "OPERATION",]:
                     continue
                 if col.startswith("count_"):
                     total_row[col] = df_view[col].sum()
@@ -762,8 +852,7 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
                 else:
                     # Generic numeric sum or leave blank
                     total_row[col] = df_view[col].sum() if pd.api.types.is_numeric_dtype(df_view[col]) else None
-            total_row["program"] = "ALL"
-            total_row["OPERATION"] = "ALL"
+            total_row["OPERATION"] = "Total"
             df_view = pd.concat([df_view, pd.DataFrame([total_row])], ignore_index=True)
 
             tt_cols = [c for c in df_view.columns if c.startswith("mean_")]
@@ -799,8 +888,6 @@ with st.expander("Test Time By Operation", expanded=False):
     test_time_block("Test Time", source_df, "tt_overall", groupby_cols=["program", "config", "pco", "Category"])
 
 
-st.markdown("---")
-
 # -------------------------------------------------------------------
 # Bottom: Distribution Charts for Selected Data
 # -------------------------------------------------------------------
@@ -835,7 +922,7 @@ with st.expander("Test Time Distribution", expanded=False):
         color_arg = "pco" if "pco" in df_dist.columns else None
         y_scale = "linear"
 
-        hover_cols = [c for c in ["program", "config", "pco", "Category", "SubCat"] if c in df_dist.columns]
+        hover_cols = [c for c in ["SERIAL_NUM", "TRANS_SEQ"] if c in df_dist.columns]
 
         if df_dist.empty or ("OPERATION" in df_dist.columns and len(df_dist['OPERATION'].cat.categories) == 0):
             st.warning("No data remains for selected filters / clip range.")
@@ -923,7 +1010,7 @@ with st.expander("Test Time By State", expanded=False):
     if not has_query_params:
         st.info("No query parameters provided. Please select filters above.")
     else:
-        df_state = load_merged_test_time_by_state().copy()
+        df_state = load_merged_test_time_by_state_detail().copy()
 
         c1_tt, c2_tt = st.columns(2)
         with c1_tt:
@@ -958,8 +1045,8 @@ with st.expander("Test Time By State", expanded=False):
             if "STATE_NAME" in df_state.columns:
                 # Build pivot with multi-index columns (value, aggfunc, pco, config)
                 state_summary = df_state.pivot_table(
-                    index=["program", "OPERATION", "STATE_NAME"],
-                    columns=["pco", "config"],
+                    index=[ "OPERATION", "STATE_NAME"],
+                    columns=["program","pco", "config"],
                     values=["TestTime(hrs)", "N"],
                     aggfunc={"TestTime(hrs)": "mean", "N": "sum"},
                     fill_value=0
@@ -973,7 +1060,7 @@ with st.expander("Test Time By State", expanded=False):
                     return "_".join(parts)
                 state_summary.columns = [_flatten(c) for c in state_summary.columns]
 
-                fixed = ["program", "OPERATION", "STATE_NAME"]
+                fixed = ["OPERATION", "STATE_NAME"]
                 value_cols = [c for c in state_summary.columns if c not in fixed]
 
                 # Separate TestTime and N columns by prefix after flattening
@@ -1010,7 +1097,7 @@ with st.expander("Test Time By State", expanded=False):
                 numeric_cols = [c for c in state_summary.columns if c not in fixed and pd.api.types.is_numeric_dtype(state_summary[c])]
                 if numeric_cols:
                     total_row = {col: state_summary[col].sum() for col in numeric_cols}
-                    total_row.update({"program": "ALL", "OPERATION": "ALL", "STATE_NAME": "ALL"})
+                    total_row.update({ "OPERATION": "ALL", "STATE_NAME": "ALL"})
                     state_summary = pd.concat([state_summary, pd.DataFrame([total_row])], ignore_index=True)
                     # Re-round float columns for consistency
                     for c in float_like_cols:
@@ -1031,8 +1118,115 @@ with st.expander("Test Time By State", expanded=False):
         else:
             st.info("No filtered data available. Query data above to view state-wise test time.")
 
+        plot_graph = st.checkbox("Plot Graph", value=False)
 
-with st.expander("Test Time By Test", expanded=True):
+        # Use filtered data if available
+        if not df_state.empty and len(df_state) < 2500 and plot_graph:
+            st.write(f"Generating distribution chart for {len(df_state)} rows.")
+            df_dist = df_state.copy()
+
+            df_dist['OP_STATE'] = df_dist['OPERATION'].astype(str) + " - " + df_dist['STATE_NAME'].astype(str)
+            
+            # Ensure numeric TEST_TIME (already converted to hours earlier, but reconvert safely)
+
+
+            if "TEST_TIME" not in df_dist.columns:
+                df_dist['TEST_TIME'] = pd.to_numeric(df_dist['TestTime(hrs)'], errors='coerce').fillna(0)
+                
+
+            df_dist['TEST_TIME'] = pd.to_numeric(df_dist['TEST_TIME'], errors='coerce')
+            if "TEST_TIME_org" not in df_dist.columns:
+                df_dist['TEST_TIME_org'] = pd.to_numeric(df_dist['TEST_TIME'], errors='coerce').fillna(0)
+                df_dist['TEST_TIME'] = df_dist['TEST_TIME_org']     
+            df_dist = df_dist.dropna(subset=['TEST_TIME'])
+
+
+            # Default plot settings (no user controls): Violin chart, color by pco if available, linear scale, no clipping
+            chart_type = "Violin"
+            color_arg = "pco" if "pco" in df_dist.columns else None
+            y_scale = "linear"
+
+            hover_cols = [c for c in ["SERIAL_NUM", "TRANS_SEQ"] if c in df_dist.columns]
+            # st.write(f"Hover columns: {hover_cols}")
+            # st.write(f"Hover columns: {df_dist.columns}")
+
+
+            if df_dist.empty or ("OP_STATE" not in df_dist.columns):
+                st.warning("No data remains for selected filters / clip range.")
+                st.stop()
+            if chart_type == "Strip (Jitter)":  # unreachable with default violin but kept for easy future toggle
+                # Manual jitter using scatter since px.strip doesn't support 'jitter' kwarg in current Plotly version
+                # Map OPERATION categories to numeric positions then add random noise
+                if "OP_STATE" in df_dist.columns:
+                    # Use only present operation categories for jitter mapping
+                    op_categories = list(df_dist['OP_STATE'].cat.categories if isinstance(df_dist['OP_STATE'], pd.Categorical) else list(df_dist['OP_STATE'].unique()))
+                    op_index_map = {op: i for i, op in enumerate(op_categories)}
+                    df_dist['_op_x'] = df_dist['OP_STATE'].map(op_index_map).astype(float)
+                    # Add jitter within +/-0.3 range
+                    rng = np.random.default_rng(seed=42)  # deterministic for reproducibility per rerun
+                    df_dist['_op_x_jitter'] = df_dist['_op_x'] + rng.uniform(-0.3, 0.3, size=len(df_dist))
+                    fig = px.scatter(
+                        df_dist,
+                        x="_op_x_jitter",
+                        y="TEST_TIME",
+                        color=color_arg,
+                        hover_data=hover_cols + ["STATE_NAME"],
+                    )
+                    # Replace numeric axis ticks with category labels
+                    fig.update_xaxes(
+                        tickmode='array',
+                        tickvals=list(range(len(op_categories))),
+                        ticktext=op_categories,
+                        title_text="State Name"
+                    )
+                else:
+                    fig = px.scatter(df_dist, y="TEST_TIME", color=color_arg, hover_data=hover_cols)
+            elif chart_type == "Box":
+                fig = px.box(
+                    df_dist,
+                    x="OP_STATE",
+                    y="TEST_TIME",
+                    color=color_arg,
+                    hover_data=hover_cols,
+                )
+                if "OP_STATE" in df_dist.columns and isinstance(df_dist['OP_STATE'], pd.Categorical):
+                    fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OP_STATE'].cat.categories))
+            else:  # Violin
+                
+                fig = px.violin(
+                    df_dist,
+                    x="OP_STATE",
+                    y="TEST_TIME",
+                    color=color_arg,
+                    hover_data=hover_cols,
+                    box=True,
+                    points="all"
+                )
+
+                fig = add_violin_labels(
+                    fig,
+                    df=df_dist,
+                    x_col="OP_STATE",
+                    y_col="TEST_TIME",
+                    color_col=color_arg,
+                    label_metric="mean",  # or "mean"
+                )
+                if "OP_STATE" in df_dist.columns and isinstance(df_dist['OP_STATE'], pd.Categorical):
+                    fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OP_STATE'].cat.categories))
+
+            fig.update_layout(
+                yaxis_title="Test Time (hours)",
+                xaxis_title="Operation",
+                yaxis_type=y_scale,
+                legend_title=("pco" if color_arg == "pco" else None),
+                margin=dict(l=10, r=10, t=40, b=10)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.caption("Distribution of TEST_TIME across selected operations and filters.")
+        else:
+            st.info("No filtered data available. Query data above to view distribution.")
+
+with st.expander("Test Time By Test", expanded=False):
     
     st.markdown('<div class="section-title">Test Time By Test</div>', unsafe_allow_html=True)
 

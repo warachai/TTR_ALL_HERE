@@ -4,7 +4,7 @@ jira_issues,MARLIN,MARLINCT-2193,In Progress,Allen Tseng,2025-10-02T02:21:07.000
 jira_issues,MARLIN,MARLINCT-2192,Resolved,Allen Tseng,2025-10-01T04:00:30.000+0800,PC file compression,TTR,,,,PC file compression
 jira_issues,MARLIN BP,MBP-1908,Resolved,Billy Aas,2025-10-18T02:17:00.000+0800,TA dwell - MBP drive,TTR,,,,
 jira_issues,MARLIN BP,MBP-1907,Resolved,Billy Aas,2025-10-18T02:13:04.000+0800,Marlin BP TA dwell,TTR,,,,
-jira_issues,DORADO,DORADO-1314,Open,Mihir Sathe,2025-10-24T02:27:01.000+0800,LZR: VBAR_WpOpti: T220: Save the final pick NLTS and PP result to RAP and smooth the results across the stroke ,TTR,,,,
+jira_issues,DORADO,DORADO-1314,Open,Mihir Sathe,2025-10-24T02:27:01.000+0800,LZR: VBAR_WpOpti: T220: Save the final pick NLTS and PP result to RAP and smooth the results across the stroke ,TTR,,,,WPOPTI: LZR VBAR_WpOpti
 jira_issues,DORADO,DORADO-1313,Open,Mihir Sathe,2025-10-24T00:29:57.000+0800,"TTR: T451, T438: Reduce the Opti Reg in the T451 call before T438 in CAL2 FINE_UJOG_INIT",TTR,,,,
 jira_issues,MARLIN,MARLINCT-2198,Resolved,Oleg Zherdetsky,2025-10-08T09:27:31.000+0800,Release PCO 7.2.10D,TTR,,,,
 jira_issues,DORADO,DORADO-1322,Resolved,Erik Hofvander,2025-10-26T10:37:04.000+0800,T282 Bode uAct Timeout Fix,TTR,,,,
@@ -39,7 +39,7 @@ jira_issues,MARLIN,MARLINCT-2226,In Progress,Oleg Zherdetsky,2025-10-25T00:46:10
 jira_issues,MARLIN,MARLINCT-2225,Open,Oleg Zherdetsky,2025-10-25T00:20:28.000+0800,OEE: Re-arrange Hot and Cold Operation ,TTR,,,,
 jira_issues,MARLIN,MARLINCT-2221,Resolved,Oleg Zherdetsky,2025-10-24T02:08:44.000+0800,Release PCO 7.3.03,TTR,,,,
 jira_issues,MARLIN,MARLINCT-2217,Resolved,Allen Tseng,2025-10-21T05:48:41.000+0800,Active Servo Flaw Table (ASFT) build algorithm change,TTR,,       3) Active Servo Flaw Table (ASFT) build algorithm change,,
-jira_issues,MARLIN,MARLINCT-2210,Resolved,Oleg Zherdetsky,2025-10-16T04:07:36.000+0800,Removal of offset search and channel training reads,TTR,,"       6) WPOPTI: Pickup of SF3 TTR, and PF3 TTR   (2.5+1 hrs)",,WPOPTI:  Removal of Offset Search & Channel Training Reads
+jira_issues,MARLIN,MARLINCT-2210,Resolved,Oleg Zherdetsky,2025-10-16T04:07:36.000+0800,Removal of offset search and channel training reads,TTR,,"       6) WPOPTI: Pickup of SF3 TTR, and PF3 TTR   (2.5+1 hrs)",,WPOPTI: Removal of Offset Search & Channel Training Reads
 jira_issues,MARLIN,MARLINCT-2209,Open,Mihir Sathe,2025-10-16T03:58:56.000+0800,T55 - ZAP track reduction,TTR,,,,T055: ZAP Handling
 jira_issues,MARLIN,MARLINCT-2202,In Progress,Allen Tseng,2025-10-10T01:08:23.000+0800,apply Increase Opti LC_Delay step size from 2 to 4 to all opti calls,TTR,,       4) apply Increase Opti LC_Delay step size from 2 to 4 to all opti calls,,
 jira_issues,MARLIN,MARLINCT-2201,Resolved,Allen Tseng,2025-10-10T01:04:06.000+0800,Increase Opti LC_Delay step size from 2 to 4,TTR,,       3) Increase Opti LC_Delay step size from 2 to 4,,
@@ -324,7 +324,7 @@ DISC,SUMMIT,CR0014255,Completed,Worawit Kanjanapruthipong,10/15/2025 11:41,T282 
 DISC,SUMMIT,CR0014264,Completed,Gronggaew Boonjuang,10/16/2025 16:27,TTR for PCBA_SCN in PRE2 (DRAM test),TTR,,,,
 DISC,SUMMIT,CR0014267,Awaiting Acceptation,Warachai Singjungreed,10/16/2025 17:52,Summit CERT BER Removal,TTR,,,,
 DISC,SUMMIT,CR0014268,Awaiting Acceptation,Warachai Singjungreed,10/17/2025 16:20,LUL Defect Scan TTR,TTR,,,,
-DISC,SUMMIT,CR0014269,Completed,Worawit Kanjanapruthipong,10/17/2025 17:36,WP Opti bypass channel training and offset searches,TTR,,,,
+DISC,SUMMIT,CR0014269,Completed,Worawit Kanjanapruthipong,10/17/2025 17:36,WP Opti bypass channel training and offset searches,TTR,,,,WPOPTI: Removal of Offset Search & Channel Training Reads
 DISC,SUMMIT,CR0014270,Completed,Gronggaew Boonjuang,10/20/2025 14:41,TTR: Remove 1>N28 from DNLD_CODE_TCG_SPT,TTR,,,,
 DISC,DORADO,CR0014286,Developing,Ronnakorn Yimgratok,10/23/2025 17:22,Dorado TTR : T55 Zero Latency Write,TTR,,,,
 DISC,MARLIN BP,CR0014298,Awaiting Approval,Worawit Kanjanapruthipong,10/28/2025 16:45,POML SMR,TTR,,,,
@@ -4532,7 +4532,7 @@ jira_issues,MARLIN,MARLINCT-1853,Resolved,,2025-03-09T00:09:11.000+0800,T47 chan
 jira_issues,MARLIN,MARLINCT-1854,Open,,2025-03-09T10:14:38.000+0800,Marlin servo test time reduction,Others,,,,
 jira_issues,MARLIN,MARLINCT-1855,Resolved,,2025-03-10T15:02:24.000+0800,Reset ACFF state before modification,Others,,,,
 jira_issues,MARLIN,MARLINCT-1856,Resolved,,2025-03-11T04:52:21.000+0800,PROZ: Enable Bi-Directional ZAP,Others,,,,
-jira_issues,MARLIN,MARLINCT-1857,Resolved,,2025-03-11T16:39:01.000+0800,TTR: T282 C0 sensitivity scoring from multi-rate to single-rate,Others,,"          5) C0 sensitivity scoring from multi-rate to single-rate: - [PRE2, CAL]",,
+jira_issues,MARLIN,MARLINCT-1857,Resolved,,2025-03-11T16:39:01.000+0800,TTR: T282 C0 sensitivity scoring from multi-rate to single-rate,Others,,"          5) C0 sensitivity scoring from multi-rate to single-rate: - [PRE2, CAL]",,Bode C0 single rate
 jira_issues,MARLIN,MARLINCT-1858,Resolved,,2025-03-11T16:50:23.000+0800,TTR: Remove PRE2 prm_282_hiResVCMBodeTemp.,Others,,,,
 jira_issues,MARLIN,MARLINCT-1859,Resolved,,2025-03-11T16:53:40.000+0800,TTR: Remove PRE2 prm_282_hiResVCMBodeTemp.,Others,,          2) TTR: Remove PRE2 prm_282_hiResVCMBodeTemp. - [L][PRE2],,
 jira_issues,MARLIN,MARLINCT-1860,Resolved,,2025-03-11T17:09:11.000+0800,TTR: Remove PWT structure bode measurement after implementation of weld-before-cert.,Others,,,,
@@ -6238,7 +6238,7 @@ jira_issues,MARLIN BP,MBP-1440,Resolved,,2025-03-08T05:14:43.000+0800,MarlinBP B
 jira_issues,MARLIN BP,MBP-1441,Resolved,,2025-03-09T00:12:11.000+0800,T47 change to accommodate SCOPY TTR change.,Others,,,,
 jira_issues,MARLIN BP,MBP-1442,Open,,2025-03-09T10:12:17.000+0800,MarlinBP servo test time reduction,Others,,,,
 jira_issues,MARLIN BP,MBP-1443,Resolved,,2025-03-10T16:04:07.000+0800,SPIO MQM development - merge from PF3 trunk to MBP branch Part 4,Others,,,,
-jira_issues,MARLIN BP,MBP-1444,Resolved,,2025-03-11T16:32:57.000+0800,TTR: T282 C0 sensitivity scoring from multi-rate to single-rate,Others,,T282 C0 sensitivity opti,,
+jira_issues,MARLIN BP,MBP-1444,Resolved,,2025-03-11T16:32:57.000+0800,TTR: T282 C0 sensitivity scoring from multi-rate to single-rate,Others,,T282 C0 sensitivity opti,,Bode C0 single rate
 jira_issues,MARLIN BP,MBP-1445,Resolved,,2025-03-11T16:57:45.000+0800,TTR: Remove PRE2 prm_282_hiResVCMBodeTemp.,Others,,TTR: Remove PRE2 prm_282_hiResVCMBodeTemp (pull in),,
 jira_issues,MARLIN BP,MBP-1446,Resolved,,2025-03-11T17:07:54.000+0800,TTR: Remove PWT structure bode measurement after implementation of weld-before-cert.,Others,,,,
 jira_issues,MARLIN BP,MBP-1447,Resolved,,2025-03-11T17:23:58.000+0800,TTR: T33 calls,Others,,,,
@@ -6628,7 +6628,7 @@ jira_issues,MARLIN BP,MBP-1848,Resolved,,2025-09-25T23:04:42.000+0800,Checkout f
 jira_issues,MARLIN BP,MBP-1849,Resolved,,2025-09-26T02:15:17.000+0800,Test222 Poor BER at IOP_DAC_CHECK state,YIP,,,,
 jira_issues,MARLIN BP,MBP-1850,Resolved,,2025-09-26T11:21:21.000+0800,Change condition restore by attribute and CMS,Others,,,,
 jira_issues,MARLIN BP,MBP-1851,Open,,2025-09-26T17:43:27.000+0800,Bosch pressure sensor issues – Servo workaround validation,Others,,,,
-jira_issues,MARLIN BP,MBP-1852,Resolved,,2025-09-27T04:02:21.000+0800,WPOPTI: Removal of Offset Search & Channel Training Reads (TTR),TTR,,Removal of Offset Search & Channel Training Reads,,WPOPTI:  Removal of Offset Search & Channel Training Reads
+jira_issues,MARLIN BP,MBP-1852,Resolved,,2025-09-27T04:02:21.000+0800,WPOPTI: Removal of Offset Search & Channel Training Reads (TTR),TTR,,Removal of Offset Search & Channel Training Reads,,WPOPTI: Removal of Offset Search & Channel Training Reads
 jira_issues,MARLIN BP,MBP-1853,Resolved,,2025-09-27T04:29:30.000+0800,PFR-0705122: [SCOPY] Change Cwrd3 Setting For prm_276_SpiralWrite_RSEED In Scopy_Parameters.py For All Programs.,YIP,,,,
 jira_issues,MARLIN BP,MBP-1854,Resolved,,2025-09-30T08:41:21.000+0800,Fix EC14555 when soak control attribute is missing (default = NONE),Others,,,,
 jira_issues,MARLIN BP,MBP-1855,Resolved,,2025-09-30T13:57:44.000+0800,"Modify T461 tracking measurements in AFH states: ISO_BER only, every 8th zone",TTR,,,,
@@ -6693,10 +6693,10 @@ jira_issues,MARLIN BP,MBP-1966,Open,,2025-11-15T01:54:45.000+0800,CLONE - Merge 
 jira_issues,MARLIN BP,MBP-1967,Resolved,,2025-11-18T05:13:49.000+0800,Bugfix CL3155175 -  Svo Tune Sensitivity projection call in PRE2,Others,,,,
 jira_issues,MARLIN BP,MBP-1968,Open,,2025-11-18T12:07:03.000+0800,Pick up - CLONE - T451 - Precautionary Opti Machine Learning (for SMR drive) : Expand to MarlinBP SMR,Others,,,,
 jira_issues,MARLIN BP,MBP-1969,Open,,2025-11-18T15:45:07.000+0800,Fix EC14555 at GMR_RES_14 on FNC2 when local variable 'diameter' referenced before assignment.,YIP,,,,
-jira_issues,MARLIN BP,MBP-1970,In Progress,,2025-11-18T15:57:47.000+0800,Fix EC11044 SCOPY IN OTHER PCO and RUN OTHER PCO cannot detect operation on PCO5.0.5B,YIP,,,,
+jira_issues,MARLIN BP,MBP-1970,Resolved,,2025-11-18T15:57:47.000+0800,Fix EC11044 SCOPY IN OTHER PCO and RUN OTHER PCO cannot detect operation on PCO5.0.5B,YIP,,,,
 jira_issues,MARLIN BP,MBP-1971,Open,,2025-11-18T17:55:21.000+0800, Fix EC11044 Cannot get DOTF rule when PWL,YIP,,,,
 jira_issues,MARLIN BP,MBP-1972,Open,,2025-11-18T23:47:32.000+0800,Create Flex SAP update config based on 4.2.15 with Bx3A SFW,Others,,,,
-jira_issues,MARLIN BP,MBP-1973,In Progress,,2025-11-19T00:17:27.000+0800,ASTF Search Optimization - LocateTestTracks,TTR,,,,
+jira_issues,MARLIN BP,MBP-1973,In Progress,,2025-11-19T00:17:27.000+0800,ASTF Search Optimization - LocateTestTracks,TTR,,,,ASTF Search Optimization 
 jira_issues,DORADO,DORADO-1,Resolved,,2023-12-13T03:16:54.000+0800,Feature:  PZO,Others,,,,
 jira_issues,DORADO,DORADO-2,Open,,2023-12-13T03:21:40.000+0800,Feature: Dynamic OCLIM,Others,,,,
 jira_issues,DORADO,DORADO-3,Open,,2023-12-20T00:49:46.000+0800,ATS3 | Controls | Seek Performance,Others,,,,
@@ -7869,7 +7869,7 @@ jira_issues,DORADO,DORADO-1212,Resolved,,2025-09-26T09:38:46.000+0800,FIN2 EC110
 jira_issues,DORADO,DORADO-1213,Resolved,,2025-09-26T09:59:28.000+0800,Change flexible depop for K31 serial number and (3XK103 or 3YP103) part number from 16TB 11hd to 16TB 13hd,YIP,,,,
 jira_issues,DORADO,DORADO-1214,In Progress,,2025-09-26T15:40:55.000+0800,TA detection in T134 LZR and FNC2,Others,,,,
 jira_issues,DORADO,DORADO-1215,Resolved,,2025-09-26T17:45:51.000+0800,Dorado5D: Bug Fix for selecting ServoTestParameters,Others,,,,
-jira_issues,DORADO,DORADO-1216,Resolved,,2025-09-27T04:01:14.000+0800,WPOPTI: Removal of Offset Search & Channel Training Reads (TTR),TTR,,,,WPOPTI:  Removal of Offset Search & Channel Training Reads
+jira_issues,DORADO,DORADO-1216,Resolved,,2025-09-27T04:01:14.000+0800,WPOPTI: Removal of Offset Search & Channel Training Reads (TTR),TTR,,,,WPOPTI: Removal of Offset Search & Channel Training Reads
 jira_issues,DORADO,DORADO-1217,Resolved,,2025-09-27T04:34:22.000+0800,PFR-0705122: [SCOPY] Change Cwrd3 Setting For prm_276_SpiralWrite_RSEED In Scopy_Parameters.py For All Programs.,YIP,,,,
 jira_issues,DORADO,DORADO-1218,Resolved,,2025-09-29T17:00:50.000+0800,DORADO: Fix for FWSD-9305,Others,,,,
 jira_issues,DORADO,DORADO-1219,Open,,2025-09-29T19:14:09.000+0800,Fix EC14555 when soak control attribute is missing (default = NONE),Others,,,,
@@ -13624,7 +13624,7 @@ jira_issues,TSR,TSR-6557,Completed,,2025-09-27T03:37:40.000+0800,T463 - Two head
 jira_issues,TSR,TSR-6558,New Request,,2025-09-27T03:40:41.000+0800,iVBAR + IOP - Dorado Integration,Others,,,,
 jira_issues,TSR,TSR-6559,New Request,,2025-09-27T04:02:35.000+0800,Run 2H FIN2 no format process without factory seed,Others,,,,
 jira_issues,TSR,TSR-6560,Completed,,2025-09-27T04:05:40.000+0800,Run 2H drives in FIN2 with format plus full pack read,Others,,,,
-jira_issues,TSR,TSR-6561,Completed,,2025-09-27T04:07:00.000+0800,WPOPTI: Removal of Offset Search & Channel Training Reads (TTR),Others,,,,WPOPTI:  Removal of Offset Search & Channel Training Reads
+jira_issues,TSR,TSR-6561,Completed,,2025-09-27T04:07:00.000+0800,WPOPTI: Removal of Offset Search & Channel Training Reads (TTR),Others,,,,WPOPTI: Removal of Offset Search & Channel Training Reads
 jira_issues,TSR,TSR-6562,Completed,,2025-09-27T04:16:35.000+0800,Update Seq Performance diag calls with AllHeadsAllZones parm,Others,,,,
 jira_issues,TSR,TSR-6563,Completed,,2025-09-27T04:27:57.000+0800,Run drives to FNC2 to have ZAP save state,Others,,,,
 jira_issues,TSR,TSR-6564,Completed,,2025-09-27T04:28:51.000+0800,Test MarlinBP PROZx applet,Others,,,,
@@ -13843,7 +13843,7 @@ jira_issues,TSR,TSR-6784,Development,,2025-10-23T17:35:04.000+0800,Further Enhan
 jira_issues,TSR,TSR-6785,Completed,,2025-10-23T23:02:48.000+0800,Merge FE_TPRC_0678916_P_INIT_SMART_FRAME_PRIOR_FORMAT to summit pco 3,Others,,,,
 jira_issues,TSR,TSR-6786,Completed,,2025-10-23T23:45:24.000+0800,WebConfig Diff feature not displaying all differences.,Others,,,,
 jira_issues,TSR,TSR-6787,New Request,,2025-10-23T23:56:49.000+0800,[Spike] Investigate PERFORMANCE/XFER State TT opportunities,Others,,,,
-jira_issues,TSR,TSR-6788,New Request,,2025-10-24T02:31:42.000+0800,T220: WpOpti: Save and Smooth final precomp registers along with Wpower settings. ,Others,,,,
+jira_issues,TSR,TSR-6788,New Request,,2025-10-24T02:31:42.000+0800,T220: WpOpti: Save and Smooth final precomp registers along with Wpower settings. ,Others,,,,WPOPTI: LZR VBAR_WpOpti
 jira_issues,TSR,TSR-6789,Development,,2025-10-24T03:52:02.000+0800,Tests 411 and 413 - Provide a mechanism to better handle test timeout due to bad tracks,Others,,,,
 jira_issues,TSR,TSR-6790,Development,,2025-10-24T09:19:13.000+0800,Summit: Evaluate modification of Active Servo Flaw Table (ASFT) build algorithm,Others,,,,
 jira_issues,TSR,TSR-6791,Development,,2025-10-24T16:25:32.000+0800,Remove READ_OPTI_OD state for SMR drives - SUMMIT-1511,Others,,,,
@@ -14015,13 +14015,13 @@ jira_issues,MARLIN,MARLINCT-2255,Resolved,,2025-11-20T03:17:15.000+0800,Release 
 jira_issues,MARLIN BP,MBP-1985,Open,,2025-11-21T18:31:54.000+0800,T299 RAP saving optimization,TTR,,,,
 jira_issues,MARLIN BP,MBP-1984,Resolved,,2025-11-21T14:20:46.000+0800,NHK T6.3.1 new FSA_PART_NUM,Others,,,,
 jira_issues,MARLIN BP,MBP-1983,Open,,2025-11-21T06:54:56.000+0800,MBP: Pickup of Cache Search Improvements,TTR,,,,
-jira_issues,MARLIN BP,MBP-1982,Open,,2025-11-21T05:16:12.000+0800,T055: TPIM Adjustment for Strong 1st Sector Writes,YIP,,,,
+jira_issues,MARLIN BP,MBP-1982,In Progress,,2025-11-21T05:16:12.000+0800,T055: TPIM Adjustment for Strong 1st Sector Writes,YIP,,,,
 jira_issues,MARLIN BP,MBP-1981,Resolved,,2025-11-21T04:01:29.000+0800,Build SCOPY ASSC 10k RPM SFW D8CB & Nominal RPM SFW D8C9 With LASER_BURN_IN_ON_RAMP Enabled,TTR,,,,
 jira_issues,MARLIN BP,MBP-1980,Resolved,,2025-11-20T22:05:25.000+0800,Fix set RAPHT switch bug when the cal is disabled.,TTR,,,,
 jira_issues,MARLIN BP,MBP-1979,Open,,2025-11-20T03:20:22.000+0800,Fixed Capacity to Variable Capacity Conversion,Others,,,,
-jira_issues,MARLIN BP,MBP-1978,In Progress,,2025-11-20T00:34:37.000+0800,"[SCOPY MarlinBP] Move SF3 CL 3251383 ""Removed the preamp fault check routine before preamp setting in In-drive Erase"" From Trunk To PCO Release Branch",YIP,,,,
-jira_issues,MARLIN BP,MBP-1977,SME Verification,,2025-11-20T00:24:49.000+0800,"[SCOPY MarlinBP] Move PF3 CL 3263694 ""HAMR Erase - Reset RSEED_ERASE_TYPE attribute at the start of scopy. This may be set from a previous erase run and should be cleared. "" From Trunk To PCO Release Branch",YIP,,,,
-jira_issues,MARLIN BP,MBP-1976,In Progress,,2025-11-20T00:16:56.000+0800,"[SCOPY MarlinBP] Move SF3 CL 3263645 ""Increase the range of the first erase function."" From Trunk To PCO Release Branch",YIP,,,,
+jira_issues,MARLIN BP,MBP-1978,Resolved,,2025-11-20T00:34:37.000+0800,"[SCOPY MarlinBP] Move SF3 CL 3251383 ""Removed the preamp fault check routine before preamp setting in In-drive Erase"" From Trunk To PCO Release Branch",YIP,,,,
+jira_issues,MARLIN BP,MBP-1977,Resolved,,2025-11-20T00:24:49.000+0800,"[SCOPY MarlinBP] Move PF3 CL 3263694 ""HAMR Erase - Reset RSEED_ERASE_TYPE attribute at the start of scopy. This may be set from a previous erase run and should be cleared. "" From Trunk To PCO Release Branch",YIP,,,,
+jira_issues,MARLIN BP,MBP-1976,SME Verification,,2025-11-20T00:16:56.000+0800,"[SCOPY MarlinBP] Move SF3 CL 3263645 ""Increase the range of the first erase function."" From Trunk To PCO Release Branch",YIP,,,,
 jira_issues,DORADO,DORADO-1392,Resolved,,2025-11-21T03:51:43.000+0800,Set Temperature when transitioning from CAL in Gemini to CAL2 in Nimbus,Others,,,,
 jira_issues,DORADO,DORADO-1391,Open,,2025-11-21T02:49:20.000+0800,Dorado1: HSMR(SMR) push with LPV margin Evaluation ,YIP,,,,
 jira_issues,DORADO,DORADO-1390,Open,,2025-11-20T22:22:42.000+0800,full SP MQM qual on Saturn tester,TTR,,,,
@@ -14040,7 +14040,7 @@ jira_issues,TSR,TSR-6955,Development Completed,,2025-11-20T10:30:22.000+0800,CP3
 jira_issues,TSR,TSR-6954,New Request,,2025-11-20T10:08:51.000+0800,CimBP Myna +Serial number WP02H5G T149 servo Flaw escappe ,Others,,,,
 jira_issues,TSR,TSR-6953,Completed,,2025-11-20T05:17:47.000+0800,iVbar T210 Cm Load,Others,,,,
 jira_issues,SUMMIT,SUMMIT-2374,Open,,2025-11-21T18:47:15.000+0800,TTR: Removal of FNC2 ATS_CAL_PROZ State,TTR,,,,
-jira_issues,MARLIN,MARLINCT-2257,In Progress,,2025-11-22T05:08:36.000+0800,Add redownload 7.2k RPM Servo after finish 10kRPM SPIN,YIP,,,,
+jira_issues,MARLIN,MARLINCT-2257,Resolved,,2025-11-22T05:08:36.000+0800,Add redownload 7.2k RPM Servo after finish 10kRPM SPIN,YIP,,,,
 jira_issues,DORADO,DORADO-1400,Open,,2025-11-22T20:34:20.000+0800,Dorado2 : SHIELD laser Iop control in Servo code,YIP,,,,
 jira_issues,DORADO,DORADO-1399,Open,,2025-11-22T04:46:30.000+0800,Update the Dorado SCopy code for PCO4.4.3 and D21.2.0,YIP,,,,
 jira_issues,DORADO,DORADO-1398,Open,,2025-11-22T04:40:08.000+0800,D2W2 Stress HMT,YIP,,,,
@@ -14048,7 +14048,7 @@ jira_issues,DORADO,DORADO-1397,Open,,2025-11-22T03:58:48.000+0800,Update the T45
 jira_issues,DORADO,DORADO-1396,Open,,2025-11-22T00:11:15.000+0800,Remove State OPTI_CHECK_T461_SMR,TTR,,,,
 jira_issues,DORADO,DORADO-1395,Open,,2025-11-21T23:54:36.000+0800,Restart PWT the Mango drives that don;t meet 30TB min capacity without 2% BPI Backoff: Evaluate MQM and sORT Reli,YIP,,,,
 jira_issues,DORADO,DORADO-1394,Open,,2025-11-21T23:04:27.000+0800,10D Servo Code xx50 (Trunk) - checkout request,YIP,,,,
-jira_issues,DORADO,DORADO-1393,Open,,2025-11-21T22:20:55.000+0800,10D Servo Code xx4A (Branch) - checkout request,YIP,,,,
+jira_issues,DORADO,DORADO-1393,Open,,2025-11-21T22:20:55.000+0800,10D Servo Code xx4B (Branch) - checkout request,YIP,,,,
 jira_issues,TSR,TSR-6962,Development Completed,,2025-11-22T01:23:24.000+0800,Modify P291 so that we don't HAVE to report DEFORMATION_RAW in order to report DEFORMATION_SCORE,Others,,,,
 jira_issues,TSR,TSR-6961,New Request,,2025-11-21T23:36:40.000+0800,PF3; T431; Enable SHK2 and SHK2SUM offset calibrations,Others,,,,
 DISC,MARLIN BP,CR0014377,Rejected at Distribution,Irin Siribannasit,2025-11-17 09:45:44,MarlinBP : Improve run other PCO for alll oper,Others,,,,
@@ -14070,3 +14070,15 @@ DISC,SUMMIT,CR0014392,Developing,Gronggaew Boonjuang,2025-11-21 13:50:22,Summit:
 DISC,SUMMIT,CR0014393,Developing,Gronggaew Boonjuang,2025-11-21 14:58:05,TTR Eval PCO - Phase#1A-B/ Phase#1B-B,TTR,,,,
 DISC,SUMMIT,CR0014394,Awaiting Acceptation,Thiansue  Yanthawin,2025-11-21 15:27:01,Summit  EC14363 IR WP_Boostup,Yield Improvement,,,,
 DISC,MARLIN BP,CR0014395,Awaiting Approval,Petcharat Boonprasop,2025-11-21 17:20:34,Operation re-arange.,Others,,,,
+jira_issues,SUMMIT,SUMMIT-2375,Open,,2025-11-24T13:41:19.000+0800,"Fix for SMR_VC Main_w,Main_t and LC_W reset to RAP Default in CAL2",YIP,,,,
+jira_issues,MARLIN,MARLINCT-2260,In Progress,,2025-11-25T02:34:23.000+0800,12k RPM eval at SPIN OPER (Soak Time reduction eval),YIP,,,,
+jira_issues,MARLIN,MARLINCT-2258,In Progress,,2025-11-24T23:26:50.000+0800,FPW Removal - conditional by wafer Type,Others,,,,
+jira_issues,MARLIN BP,MBP-1989,In Progress,,2025-11-25T04:36:55.000+0800,CLONE - T055: WWD - BER Statistics within track,Others,,,,
+jira_issues,MARLIN BP,MBP-1988,Open,,2025-11-25T01:42:37.000+0800,CLONE - Add redownload 7.2k RPM Servo after finish 10kRPM SPIN,YIP,,,,
+jira_issues,MARLIN BP,MBP-1987,Resolved,,2025-11-25T00:18:42.000+0800,Create PCO 5.0.4A with RAPHT update in PWT,Others,,,,
+jira_issues,MARLIN BP,MBP-1986,Open,,2025-11-24T10:46:42.000+0800,Fix EC14555 at MASTER_FORMAT : UnboundLocalError: local variable 'failed' referenced before assignment,Others,,,,
+jira_issues,DORADO,DORADO-1402,Open,,2025-11-25T04:49:29.000+0800,ASTF Search Optimization - LocateTestTracks,TTR,,,,ASTF Search Optimization 
+jira_issues,DORADO,DORADO-1401,Open,,2025-11-24T23:10:36.000+0800,Dorado2 : PegasusBB default Write Triplets update,YIP,,,,
+jira_issues,TSR,TSR-6966,Development,,2025-11-25T05:28:10.000+0800,"Coverity - Triage CIDs 113551, 113563, 113566.",Others,,,,
+jira_issues,TSR,TSR-6964,New Request,,2025-11-24T16:46:27.000+0800,"SUMMIT iVBAR: To disable 'APS59A', 'APS59B', 'APS59C' in code to aligned to mass pro.",Others,,,,
+jira_issues,TSR,TSR-6963,New Request,,2025-11-24T13:45:08.000+0800,"Fix for SMR_VC Main_w,Main_t and LC_W reset to RAP Default in CAL2",Others,,,,
