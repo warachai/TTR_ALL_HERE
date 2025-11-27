@@ -1092,7 +1092,7 @@ with st.expander("Plan Validation", expanded=False):
             df_view.reset_index(inplace=True)
 
 
-                    # If exactly two TestTime columns, compute diff (first minus second)
+            # If exactly two TestTime columns, compute diff (first minus second)
             #Join from tt_plan to get Task_name and Saving columns
             # Build tt_plan dataframe with necessary columns
             required_cols = ['OPERATION', 'Task_name', 'Saving']
@@ -1103,7 +1103,7 @@ with st.expander("Plan Validation", expanded=False):
 
             else:
                 df_tt_plan = current_tasks_org[required_cols]
-                st.write("No filter")
+
                 
             if 'OPERATION' in df_view.columns:
                 df_view = pd.concat([df_view, df_tt_plan], ignore_index=True, sort=False)
@@ -1112,7 +1112,8 @@ with st.expander("Plan Validation", expanded=False):
                 # 2) Build AgGrid options
             
             gb = GridOptionsBuilder.from_dataframe(df_view)
-            custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+            # Add blank value ("") to the end of the custom order
+            custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2", None, "TOTAL"]
             category_order_js = json.dumps(custom_order)
 
             js_comparator_code = f"""
@@ -1129,6 +1130,7 @@ with st.expander("Plan Validation", expanded=False):
             gb.configure_column(
             "OPERATION",
             rowGroup=True,
+            hide=False,
             sort="asc",
             sortIndex=0,
             comparator=JsCode(js_comparator_code)
@@ -1139,11 +1141,47 @@ with st.expander("Plan Validation", expanded=False):
                 if col.startswith("mean_"):
                     group_name_list.append(col)
 
+            if len(group_name_list) == 2:
+                df_view["Diff"] = df_view[group_name_list[0]] - df_view[group_name_list[1]]
+                gb.configure_column(
+                    "Diff",
+                    type=["numericColumn", "customNumericFormat"],
+                    valueFormatter="x.toFixed(2)",
+                    aggFunc="sum",
+                )          
+   
+
+            # df_view['Expected'] = df_view['Diff'] - df_view['Saving']
+
             for col in group_name_list:
                     gb.configure_column(col, aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
 
             # gb.configure_column("OPERATION", rowGroup=True, hide=True)
             gb.configure_column('Saving', aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
+
+            
+            # df_view['Expected'] = df_view.apply(
+            #     lambda row: row['Diff'] - row['Saving'] if pd.notnull(row.get('Saving')) and pd.notnull(row.get('Diff')) else None,
+            #     axis=1
+            # )
+            gb.configure_column('Expected',aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
+
+            # Add TOTAL row summing numeric columns of current display
+            numeric_cols = [c for c in df_view.columns if pd.api.types.is_numeric_dtype(df_view[c])]
+            if numeric_cols:
+                total_row = {col: df_view[col].sum() for col in numeric_cols}
+                # For non-numeric columns, set a label for the total row
+                for col in df_view.columns:
+                    if col not in numeric_cols:
+                        if col == "OPERATION":
+                            total_row[col] = "TOTAL"
+                        else:
+                            total_row[col] = ""
+                df_view = pd.concat([df_view, pd.DataFrame([total_row])], ignore_index=True)
+                # Optionally round float columns for consistency
+                for col in numeric_cols:
+                    if pd.api.types.is_float_dtype(df_view[col]):
+                        df_view[col] = pd.to_numeric(df_view[col], errors='coerce').round(2)
 
             # General grid options
             gb.configure_grid_options(
@@ -1152,8 +1190,6 @@ with st.expander("Plan Validation", expanded=False):
                 animateRows=True,
                 suppressAggFuncInHeader=False,
             )
-
-            grid_options = gb.build()
 
 
             # Autosize columns after grid loads
@@ -1165,8 +1201,9 @@ with st.expander("Plan Validation", expanded=False):
                 gridApi.sizeColumnsToFit();
             }
             """)
-
-            # Render AgGrid with export button
+            grid_options = gb.build()
+            
+            # 3) Display AgGrid
             grid_response = AgGrid(
                 df_view,
                 gridOptions=grid_options,
