@@ -205,6 +205,7 @@ LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 MASTER_FILE_DIR = os.path.join(BASE_DIR, 'MASTER')
 # ---- new master-level files ----
 TASK_MASTER_FILE   = os.path.join(MASTER_FILE_DIR, "task_master.csv")
+PLAN_MASTER_FILE   = os.path.join(MASTER_FILE_DIR, "plan_master.csv")
 PRODUCT_MASTER_FILE = os.path.join(MASTER_FILE_DIR, "product_master.csv")
 FEATURE_MASTER_FILE = os.path.join(MASTER_FILE_DIR, "feature_master.csv")
 TASK_FEATURE_FILE   = os.path.join(MASTER_FILE_DIR, "task_feature.csv")

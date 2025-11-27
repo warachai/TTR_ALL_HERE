@@ -1112,7 +1112,7 @@ with st.expander("Test Time By State", expanded=False):
 
                 styled = state_summary.style.apply(highlight_last_row, axis=1)
 
-                st.dataframe(styled, use_container_width=True, height=25*32)
+                st.dataframe(styled, use_container_width=True, height=15*32)
             else:
                 st.warning("The dataset does not contain a 'STATE' column.")
         else:
@@ -1227,7 +1227,6 @@ with st.expander("Test Time By State", expanded=False):
             st.info("No filtered data available. Query data above to view distribution.")
 
 with st.expander("Test Time By Test", expanded=False):
-    
     st.markdown('<div class="section-title">Test Time By Test</div>', unsafe_allow_html=True)
 
     if not has_query_params:
@@ -1235,7 +1234,7 @@ with st.expander("Test Time By Test", expanded=False):
     else:
         df_test = load_merged_test_time_by_test().copy()
 
-        c1_tt, c2_tt = st.columns(2)
+        c1_tt, c2_tt, c3_tt = st.columns(3)
         col_alias = {
             "STATE": "STATE_NAME",
             "OP": "OPERATION",
@@ -1252,6 +1251,15 @@ with st.expander("Test Time By Test", expanded=False):
             )
 
         with c2_tt:
+            view_type = st.selectbox(
+                "View Type",
+                ["By Test", "By Oper"],
+                index=0,
+                help="Choose how to group the test time data.",
+                key="view_type_tt_by_test"
+            )
+            
+        with c3_tt:
             logic_tt_op_tt = st.radio(
             "Search Mode",
             ["OR", "AND"],
@@ -1259,8 +1267,7 @@ with st.expander("Test Time By Test", expanded=False):
             help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
             key="logic_tt_op_tt"
             
-        )
-
+            )
 
 
         df_test = apply_filter_flex(
@@ -1304,13 +1311,29 @@ with st.expander("Test Time By Test", expanded=False):
             if len(test_time_cols) == 2:
                 tt_summary["TT_Diff"] = tt_summary[test_time_cols[0]] - tt_summary[test_time_cols[1]]
 
+            custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
 
             # 2) Build AgGrid options
             gb = GridOptionsBuilder.from_dataframe(tt_summary)
 
+            gb.configure_column(
+                "OPERATION",
+                sortingOrder=["asc"],
+                comparator=f"""
+                function(a, b) {{
+                    const order = {custom_order};
+                    return order.indexOf(a) - order.indexOf(b);
+                }}
+                """
+            )            
+
             # group by TEST_NUMBER (now a plain string column name)
-            gb.configure_column("TEST_NUMBER", rowGroup=True, hide=True)
-            gb.configure_column("PARAMETER_NAME", rowGroup=True, hide=True)
+            if view_type == "By Test":
+                gb.configure_column("TEST_NUMBER", rowGroup=True, hide=True)
+                gb.configure_column("PARAMETER_NAME", rowGroup=True, hide=True)
+            elif view_type == "By Oper":
+                gb.configure_column("OPERATION", rowGroup=True, hide=True)
+                gb.configure_column("TEST_NUMBER", rowGroup=True, hide=True)
 
             if len(test_time_cols) == 2:
                 gb.configure_column('TT_Diff', aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
@@ -1358,7 +1381,7 @@ with st.expander("Test Time By Test", expanded=False):
                 enable_enterprise_modules=True,
                 update_mode=GridUpdateMode.NO_UPDATE,
                 fit_columns_on_grid_load=True,
-                height=25*32,
+                height=19*32,
                 onGridReady=auto_size_js,
                 allow_unsafe_jscode=True,
                 custom_js=[
