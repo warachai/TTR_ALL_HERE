@@ -14026,7 +14026,7 @@ jira_issues,DORADO,DORADO-1392,Resolved,,2025-11-21T03:51:43.000+0800,Set Temper
 jira_issues,DORADO,DORADO-1391,Open,,2025-11-21T02:49:20.000+0800,Dorado1: HSMR(SMR) push with LPV margin Evaluation ,YIP,,,,
 jira_issues,DORADO,DORADO-1390,Open,,2025-11-20T22:22:42.000+0800,full SP MQM qual on Saturn tester,TTR,,,,
 jira_issues,DORADO,DORADO-1389,Open,,2025-11-20T07:44:19.000+0800,Dorado SCopy T418 YIP,YIP,,,,
-jira_issues,DORADO,DORADO-1388,Open,,2025-11-20T06:26:58.000+0800,Removal of offset search and channel training reads,TTR,,,,
+jira_issues,DORADO,DORADO-1388,Open,,2025-11-20T06:26:58.000+0800,Removal of offset search and channel training reads,TTR,,,,WPOPTI: Removal of Offset Search & Channel Training Reads
 jira_issues,DORADO,DORADO-1387,Resolved,,2025-11-20T04:00:33.000+0800,Reduce Dorado 2 Soak  Time to 9 Days ,TTR,,,,
 jira_issues,DORADO,DORADO-1386,Open,,2025-11-20T01:50:03.000+0800,SCopy support for the MIG pattern,Others,,,,
 jira_issues,DORADO,DORADO-1385,SME Verification,,2025-11-20T00:56:03.000+0800,Conditional Flex SAP updates,TTR,,,,
