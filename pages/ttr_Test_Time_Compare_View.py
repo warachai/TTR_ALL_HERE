@@ -10,11 +10,12 @@ import plotly.express as px
 import numpy as np
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from st_aggrid.shared import JsCode
-
+import config
 
 st.set_page_config(page_title="Test Time View", layout="wide")
 
-test_time_folder = r"R:\Test_Time_Hist"
+
+test_time_folder = config.TT_HISTORY_PATH
 
 def add_violin_labels(
     fig,
