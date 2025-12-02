@@ -32,6 +32,7 @@ MARLIN BP,MBP-1884,MBP-1884,FPW removal
 MARLIN BP,MBP-1887,MBP-1887,FPW removal
 MARLIN BP,Need Jira,NEED JIRA,POML all mode for SMR
 MARLIN BP,MBP-1731,MBP-1731,Scopy TA Scan Feed Forward
+MARLIN BP,MBP-1985,MBP-1985,T299 RAP Saving (4)
 MARLIN BP,MBP-1705,MBP-1705,"Project to remove UACT1 ""milli"" actuator"
 MARLIN BP,Need Jira,NEED JIRA,T285 DRCM opti  (MarlinCT-1948)
 MARLIN BP,Need Jira,NEED JIRA,WP opti Prediction
@@ -41,8 +42,10 @@ MARLIN BP,Need Jira,NEED JIRA,Remove PWT opti
 MARLIN BP,Need Jira,NEED JIRA,VBAR Laser Predition
 MARLIN BP,MBP-,MBP-,Skip track certify CMR (can we pull in 1 qtr)/ (MarlinCT-1980)
 MARLIN BP,MBP-1730,MBP-1730,SMR Format removal (SMR only)
+MARLIN BP,MBP-1954,MBP-1954,Write/Read xfer
 MARLIN BP,MBP-1909,MBP-1909,T55 with independent ZAP track (can we pull in?
-MARLIN BP,need jira,NEED JIRA,Z-path (5hrs?) (can it pull in before Q3? - Mingzhong
+MARLIN BP,TSR-6572,TSR-6572,Z-path (5hrs?) (can it pull in before Q3? - Mingzhong
+MARLIN BP,MBP-1955,MBP-1955,Z-path (5hrs?) (can it pull in before Q3? - Mingzhong
 MARLIN BP,MBP-1931,MBP-1931,10k RPM eval at SPIN OPER (Soak Time reduction eval)
 MARLIN BP,MBP-1488,MBP-1488,T451 Random Pattern Generation 5% TTR (when?)
 MARLIN BP,MBP-1501,MBP-1501,3rev to 2rev ZAP 30TBLV Meta (30 hrs but won't intersect in time for Meta)
@@ -401,3 +404,66 @@ SUMMIT,SUMMIT-2345,SUMMIT-2345,"TTR: PWT optimization: DNLD_CODE, enableDiags, P
 SUMMIT,DISC-CR0014339,CR0014339,Remove BODE state in PRE2
 SUMMIT,SUMMIT-2361,SUMMIT-2361,TTR: Removal of main_w_mux opti state in CAL2
 SUMMIT,TSR-6762,TSR-6762,TTR: Removal of main_w_mux opti state in CAL2
+MARLIN BP,MBP-1313,MBP-1313,POML All mode
+MARLIN BP,MBP-1917,MBP-1917,Evaluate modification of Active Servo Flaw Table (ASFT) build algorithm.
+MARLIN BP,MBP-1924,MBP-1924,SF3 ReloadRAP Eval
+MARLIN BP,MBP-1973,MBP-1973,ASTF Search Optimization - LocateTestTracks
+MARLIN BP,MBP-1746,MBP-1746,Skip track certify CMR (can we pull in 1 qtr)/ (MarlinCT-1980 SUMMIT-1943)
+MARLIN BP,MBP-1920,MBP-1920,Laser NFT Annealing Qualification
+MARLIN BP,MBP-1983,MBP-1983,Pickup of Cache Search Improvements
+MARLIN BP,MBP-1748,MBP-1748,Data Collection Tests Sampling Or Removal
+MARLIN,MARLINCT-2210,MARLINCT-2210,"       7) WPOPTI: Pickup of SF3 TTR, and PF3 TTR   (2.5+1 hrs)"
+MARLIN,MARLINCT-2168,MARLINCT-2168,       8) HAMR: Temperature Ramp Test - ASTB/VBAR Removal (5-10 hrs)
+MARLIN,MARLINCT-1704,MARLINCT-1704,       1) FPW CAL2 removal (45hrs) - (Can enable by CMS) - round 2(7R&L7)
+MARLIN,MARLINCT-1913,MARLINCT-1913,"      2) TA scan feed forward - [H][SCOPY]   (ww23release, cut-in ww25)"
+MARLIN,MARLINCT-1789,MARLINCT-1789,"      2) TA scan feed forward - [H][SCOPY]   (ww23release, cut-in ww25)"
+MARLIN,MARLINCT-1867,MARLINCT-1867,       2) VBAR ATI prediction ML - [L][CAL2] - ? hr - PCO TVM 
+SUMMIT,DISC-CR0014327,CR0014327,Remove T299_DS_ATI state in FNC2 and CRT2
+SUMMIT,DISC-CR0014338,CR0014338,PRE_LUL_TEST state reduce SampCn (100 -> 50)
+SUMMIT,DISC-CR0014342,CR0014342,Reduce CylRg from 1000 to 500 / 4x T30 SEEK_TEST (Seq Read/Write Seek) 
+SUMMIT,DISC-CR0014342,CR0014342,Reduce Passcnt from 10000 to 5000 / 2x T30 PWT_SERVO_DATA (Ran Seek)
+SUMMIT,DISC-CR0014342,CR0014342,Reduce CylRg from 1000 to 500 / 12x T30 PWT_SERVO_DATA  (Seq Read/Write Seek) 
+SUMMIT,DISC-CR0014160,CR0014160,T150 PWT by Exception
+SUMMIT,DISC-CR0014341,CR0014341,Reduce SampCnt 131 to 100 @ PES_SCRN2 state 
+SUMMIT,SUMMIT-2337,SUMMIT-2337,SCOPY spiral write (YIP#8)
+SUMMIT,CR0014419,CR0014419,VARIABLE_SPARES TTR
+SUMMIT,SUMMIT-2370,SUMMIT-2370,TTR: Reduce head iteration multiple Get Servo Flaw commands to single command for all heads
+SUMMIT,TSR-6790,TSR-6790,modification of Active Servo Flaw Table (ASFT) build algorithm
+SUMMIT,TSR-6549,TSR-6549,Fix 126 failure with the TA SIM optimization
+DORADO,Dorado-1036,DORADO-1036,"EWC changes ported from Marlin (Radical malloc, Smooth linear Bode, Reduce skdly in T135, T282 Idle Time red, ZAP seek path optimization
+MarlinCT-1958, 2008, 2012, 2018, 2057
+Dorado 1156, 1157, 1159, 1177, 1179"
+DORADO,Dorado-1179,DORADO-1179,"TTR[6Hrs] - Radical malloc eval  (6 hrs) (MarlinCT-1958, MarlinCT-2057)"
+DORADO,Dorado-1156,DORADO-1156,TTR [8Hrs]: Further Test Time Reduction In T282 - Bode Convergence Check (8 hrs)
+DORADO,Dorado-1158,DORADO-1158,[8Hrs]ZAP Seek Path Optimization (8 hours)
+DORADO,Dorado-1157,DORADO-1157,TTR[5Hrs] - Reducing the SkDly in t135 from 20ms to 0ms 
+DORADO,Dorado-906,DORADO-906,PCO 4.4.1) Soak 9 days  (HSMR needs Mango communication / approval)
+DORADO,Need Jira,NEED JIRA,PCO 4.4.x) Sea-Pot2 Soak 9 days -> 7 day avg (HSMR needs Mango communication / approval)
+DORADO,Need Jira,NEED JIRA,PCO 4.4.x)Dynamic  Soak 7 days -> 5 day avg (HSMR needs Mango communication / approval)
+DORADO,Dorado-1037,DORADO-1037,"SMR Dorado1 fractional VISA byZone, By preamp"
+DORADO,Dorado-906,DORADO-906,Soak optimization (14days to 9days FW32 DOE results) (refer to soak optimization section)
+DORADO,Dorado-902,DORADO-902,MQM 2 loop move to iMQM (30% running iMQM)
+DORADO,Dorado-1198,DORADO-1198,Remove PWT SF3 portion for weld before Cert (was 6 ->21)
+DORADO,Dorado-1116,DORADO-1116,    PC file compression T130 (15 hrs ? - 
+DORADO,Dorado-1283,DORADO-1283, State removal items (PWT TTR  
+DORADO,Dorado-1284,DORADO-1284, State removal items (RW Xfer) TTR  ? hrs)
+DORADO,Dorado-812,DORADO-812,VBAR TPI SME reduce backoff step 
+DORADO,Dorado-651,DORADO-651,Disable BPI sweep.
+DORADO,Dorado-1223,DORADO-1223,remove FNC2 state T299_ DS_ATI (CMR only)
+DORADO,Dorado-1224,DORADO-1224,T299_ATI state removal for CRT2 
+DORADO,Dorado-1263,DORADO-1263,Remove Opti_chk_461 
+DORADO,Dorado-1029,DORADO-1029,  NDS to run in parallel with Soak (8 days savnigs)
+DORADO,Need Jira,NEED JIRA, Flex SAP update (intelligent - only when needed)
+DORADO,Dorado-1294,DORADO-1294,Scopy higher time than Summit review that is matches (HAMR - lower RPM RSEED + Laser cal +..)
+DORADO,Dorado-461,DORADO-461,   HSMR Phase 6C (45 hrs for conditional read CMR)
+DORADO,Dorado-1252,DORADO-1252,  Optimize Flash savings in IBW
+DORADO,Dorado-1292,DORADO-1292,T55 reduce time in ZAP of these tracks (~11hr - ZEUS)
+DORADO,Dorado-1136,DORADO-1136,NDS to utilize 2 or 4 head bank write (only if soak is <8 days)
+DORADO,need jira,NEED JIRA,"Sea-Pot (high RPM, pressure @ xx ) soak. (leverage Marlin)"
+DORADO,Dorado-909,DORADO-909,Merge Master Format and SPFS - G7
+DORADO,need jira,NEED JIRA,<5% O2 fill during Scpy / ZAP (could help reduce ZAP iter)
+DORADO,need jira,NEED JIRA,SMR Formt removal (SMR only) (med risk - Glist add)
+DORADO,need jira,NEED JIRA,LZR state EWC optimiziation (multipl Jiras') ~30 hrs?
+DORADO,need jira,NEED JIRA,PROZx  (High risk - integration)
+DORADO,need jira,NEED JIRA,Scopy higher RPM write (spiral write ) - 
+DORADO,need jira,NEED JIRA,Flawscan higher RPM
