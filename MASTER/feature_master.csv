@@ -1039,7 +1039,7 @@ jira_issues,SUMMIT,SUMMIT-558,Closed,,2023-06-06T12:25:14.000+0800,Summit TTR: R
 jira_issues,SUMMIT,SUMMIT-559,Closed,,2023-06-06T12:27:33.000+0800,Summit TTR: T33 high retry fixed,Others,,,,
 jira_issues,SUMMIT,SUMMIT-560,Closed,,2023-06-06T12:34:24.000+0800,Summit TTR: T461 Zero latency Write,Others,,,,
 jira_issues,SUMMIT,SUMMIT-561,Closed,,2023-06-06T12:37:19.000+0800,Summit TTR: Zone alignment T451/461,Others,,,,
-jira_issues,SUMMIT,SUMMIT-562,Closed,,2023-06-06T12:39:35.000+0800,Summit TTR: T451 optimize track selection,Others,,,,
+jira_issues,SUMMIT,SUMMIT-562,Closed,,2023-06-06T12:39:35.000+0800,Summit TTR: T451 optimize track selection,Others,,,,TTR: T451 optimize track selection
 jira_issues,SUMMIT,SUMMIT-563,Closed,,2023-06-06T12:41:45.000+0800,Summit TTR: enable T451 Zero Latency,Others,,,,
 jira_issues,SUMMIT,SUMMIT-564,Closed,,2023-06-06T12:43:08.000+0800,Summit TTR: T425 TTR,Others,,,,
 jira_issues,SUMMIT,SUMMIT-565,Closed,,2023-06-08T01:34:27.000+0800,T230 spare accounting to match T130 accounting,Others,,,,
@@ -1740,7 +1740,7 @@ jira_issues,SUMMIT,SUMMIT-1272,Closed,,2024-04-22T23:08:14.000+0800,Review OPTI_
 jira_issues,SUMMIT,SUMMIT-1273,Closed,,2024-04-23T10:17:12.000+0800,Investigate raising un-yielded EC in CAL2 VBAR_METRICS iRecovery,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1274,Closed,,2024-04-23T15:05:33.000+0800,Meta codes - fails to Verify that the month of Clean Room Exit,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1275,Closed,,2024-04-23T16:26:07.000+0800,Investigate potential alignments in T299 setting for SMR,Others,,,,
-jira_issues,SUMMIT,SUMMIT-1276,Closed,,2024-04-23T17:17:33.000+0800,T451 optimize track selection for SMR/HSMR,Others,,,,
+jira_issues,SUMMIT,SUMMIT-1276,Closed,,2024-04-23T17:17:33.000+0800,T451 optimize track selection for SMR/HSMR,Others,,,,TTR: T451 optimize track selection
 jira_issues,SUMMIT,SUMMIT-1277,Closed,,2024-04-24T09:49:54.000+0800,TpiMeasurementMarginAdjust array for the SMR config in HSMR process,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1278,Closed,,2024-04-24T23:05:20.000+0800,HSMR: Add z8 to the zone mask in VBAR_TPI_SMR_HSMR T211,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1279,Closed,,2024-04-25T00:31:14.000+0800,EC54971 yield improvement #2,Others,,,,
@@ -2221,7 +2221,7 @@ jira_issues,SUMMIT,SUMMIT-1761,Closed,,2025-01-21T12:23:08.000+0800,SUMMIT : EC4
 jira_issues,SUMMIT,SUMMIT-1762,Closed,,2025-01-21T15:36:15.000+0800,Remove SUMMIT-1069 Extended WP due to PK1 Writer Interception,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1763,Closed,,2025-01-22T08:48:01.000+0800,Auto detect for PK1 drives,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1764,Closed,,2025-01-22T09:46:13.000+0800,Optimize PSTE_RANGE for RD_Fault_pct1 in detecting dSTE at Z0,Others,,,,
-jira_issues,SUMMIT,SUMMIT-1765,Closed,,2025-01-22T11:15:10.000+0800,TTR: T193 test time reduction - pre audit,Others,,TTR: T193 test time reduction,,
+jira_issues,SUMMIT,SUMMIT-1765,Closed,,2025-01-22T11:15:10.000+0800,TTR: T193 test time reduction - pre audit,Others,,TTR: T193 test time reduction,,TTR: T193 test time reduction - pre audit
 jira_issues,SUMMIT,SUMMIT-1766,Closed,,2025-01-22T14:39:47.000+0800,SUMMIT SMR VC: adapt VBAR_Metric to variable capacity,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1767,Closed,,2025-01-22T15:43:32.000+0800,IVBAR T299 abnormal BER/SFR dropout causing EC48943,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1768,Closed,,2025-01-22T16:00:04.000+0800,Recovery_defect_failure EC11049 at FNC2 Operation (SPFS State),Others,,,,
@@ -2366,7 +2366,7 @@ jira_issues,SUMMIT,SUMMIT-1905,Closed,,2025-03-11T15:28:48.000+0800,EC10402 Rd M
 jira_issues,SUMMIT,SUMMIT-1906,Closed,,2025-03-11T17:33:16.000+0800,Back out Jira1602 to get back SIFree Feature,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1907,Closed,,2025-03-11T17:55:30.000+0800,EC49151 due to non-WP backoff by pSTE threshold,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1908,Closed,,2025-03-11T18:20:58.000+0800,"Release Block Point ""E"" Servo Code CEC0 for Summit SMR 30TB VC",Others,,,,
-jira_issues,SUMMIT,SUMMIT-1909,Closed,,2025-03-11T22:44:05.000+0800,TTR: T193 test time reduction - post audit,Others,,,,
+jira_issues,SUMMIT,SUMMIT-1909,Closed,,2025-03-11T22:44:05.000+0800,TTR: T193 test time reduction - post audit,Others,,,,TTR: T193 test time reduction - post audit
 jira_issues,SUMMIT,SUMMIT-1910,Closed,,2025-03-11T22:45:12.000+0800,TTR: Investigate potential CPU Time Improvement for T299 States (Won't Do),Others,,,,
 jira_issues,SUMMIT,SUMMIT-1911,Closed,,2025-03-12T18:18:12.000+0800,CMR iVBAR PWT Serial Format Iteration change to 10 from 15,Others,,,,
 jira_issues,SUMMIT,SUMMIT-1912,Closed,,2025-03-13T13:16:17.000+0800,Improve TA severity correlation(PRE2~FNC2),Others,,,,
@@ -3927,7 +3927,7 @@ jira_issues,MARLIN,MARLINCT-1183,Resolved,,2024-04-24T02:52:45.000+0800,support 
 jira_issues,MARLIN,MARLINCT-1184,Resolved,,2024-04-24T04:23:21.000+0800,Update SMR FPC1/TGTA to STD code for Eng PN-999,Others,,,,
 jira_issues,MARLIN,MARLINCT-1185,Resolved,,2024-04-24T04:27:26.000+0800,"Eval Config for MAT9 SMR with these JIRA MARLINCT-1126, 1151 and 1184",Others,,,,
 jira_issues,MARLIN,MARLINCT-1186,Resolved,,2024-04-24T09:56:31.000+0800,POML OTF,Others,,,,
-jira_issues,MARLIN,MARLINCT-1187,Resolved,,2024-04-25T22:42:51.000+0800,Marlin Pickup of Write Process Restructuring,Others,,,,
+jira_issues,MARLIN,MARLINCT-1187,Resolved,,2024-04-25T22:42:51.000+0800,Marlin Pickup of Write Process Restructuring,Others,,,,Write Process Restructuring Fix to VBAR Laser Setup
 jira_issues,MARLIN,MARLINCT-1188,Resolved,,2024-04-26T02:07:13.000+0800,IOP Push by QLTCC Residuals - Eval Request,Others,,,,
 jira_issues,MARLIN,MARLINCT-1189,Resolved,,2024-04-26T03:54:52.000+0800,Release PCO 7.1.05A,Others,,,,
 jira_issues,MARLIN,MARLINCT-1191,Resolved,,2024-04-26T05:25:23.000+0800,Remove 20H for 24TB support only allow Depop 19hd and lower hd cnt,Others,,,,
@@ -4432,7 +4432,7 @@ jira_issues,MARLIN,MARLINCT-1740,Resolved,,2025-01-17T09:08:27.000+0800,APS66_HI
 jira_issues,MARLIN,MARLINCT-1741,Resolved,,2025-01-17T11:30:04.000+0800,Marlin update P047_ECCENTRICITY converting equation,Others,,,,
 jira_issues,MARLIN,MARLINCT-1742,Resolved,,2025-01-21T17:02:11.000+0800,TTR Set BPI and TPI formats from PC file (Expand to TPI config of HSMR-S and SMR),Others,,          3) Update BPI/TPI FMT viz PC file on HSMR - [L] [CAL2],,Update BPI_TPI via PC_FILE
 jira_issues,MARLIN,MARLINCT-1743,Resolved,,2025-01-22T01:55:07.000+0800,Prep drives for AFH coefficients (INS1 wafer),Others,,,,
-jira_issues,MARLIN,MARLINCT-1744,Resolved,,2025-01-22T23:13:37.000+0800,Write Process Restructuring: Fix to VBAR Laser Setup,Others,,,,
+jira_issues,MARLIN,MARLINCT-1744,Resolved,,2025-01-22T23:13:37.000+0800,Write Process Restructuring: Fix to VBAR Laser Setup,Others,,,,Write Process Restructuring Fix to VBAR Laser Setup
 jira_issues,MARLIN,MARLINCT-1745,Resolved,,2025-01-23T11:13:08.000+0800,ProZ : Code improvement phase2,Others,,,,
 jira_issues,MARLIN,MARLINCT-1746,Resolved,,2025-01-24T01:03:01.000+0800,Release PCO 7.1.11D,Others,,,,
 jira_issues,MARLIN,MARLINCT-1747,Resolved,,2025-01-24T02:06:50.000+0800,"AFZ Seal Helium Leak Rate Testing, Rework",Others,,,,
@@ -6150,7 +6150,7 @@ jira_issues,MARLIN BP,MBP-1349,Resolved,,2025-01-20T16:58:54.000+0800,SPIO MQM d
 jira_issues,MARLIN BP,MBP-1350,Resolved,,2025-01-21T16:00:05.000+0800,"Change recovery order for EC48943 at CAL2, CRT2 and PWT to improve EC11044",Others,,,,
 jira_issues,MARLIN BP,MBP-1351,Open,,2025-01-22T22:14:47.000+0800,Thicker AL DOE - Process Instructions,Others,,,,
 jira_issues,MARLIN BP,MBP-1352,Resolved,,2025-01-23T03:20:26.000+0800,Enable Skip track flawscan on SMR,Others,,Enable STFL on SMR,,STFL Enable 
-jira_issues,MARLIN BP,MBP-1353,Resolved,,2025-01-25T00:44:10.000+0800,CLONE - Write Process Restructuring: Fix to VBAR Laser Setup,Others,,Write Process Restructuring: Fix to VBAR Laser Setup,,
+jira_issues,MARLIN BP,MBP-1353,Resolved,,2025-01-25T00:44:10.000+0800,CLONE - Write Process Restructuring: Fix to VBAR Laser Setup,Others,,Write Process Restructuring: Fix to VBAR Laser Setup,,Write Process Restructuring Fix to VBAR Laser Setup
 jira_issues,MARLIN BP,MBP-1354,Resolved,,2025-01-25T06:51:28.000+0800,SMR mode LFA cal in SMR drive,Others,,,,
 jira_issues,MARLIN BP,MBP-1355,Resolved,,2025-01-27T15:26:47.000+0800,MarlinBP Change IR for PRE2 EC11049 INIT State,Others,,,,
 jira_issues,MARLIN BP,MBP-1356,Resolved,,2025-01-28T00:18:58.000+0800,ARS CMR VBAR Experiments - 9H wafer qual drives,Others,,,,
@@ -6478,7 +6478,7 @@ jira_issues,MARLIN BP,MBP-1690,Resolved,,2025-07-08T21:13:22.000+0800,"Raise fai
 jira_issues,MARLIN BP,MBP-1691,Resolved,,2025-07-08T23:43:51.000+0800,OC with high valid parity on CMR,Others,,,,
 jira_issues,MARLIN BP,MBP-1692,Resolved,,2025-07-09T04:17:22.000+0800,Disable HMS Consideration in Laser Pick,Others,,,,
 jira_issues,MARLIN BP,MBP-1693,Resolved,,2025-07-09T10:39:19.000+0800,MarlinBP RSEED Erase M2 Process (Note: Erase M2 is for step 2 and step 3 failures),Others,,,,
-jira_issues,MARLIN BP,MBP-1694,In Progress,,2025-07-09T14:38:02.000+0800,TTR: T193 CHROME disable pre calibration audit,Others,,,,
+jira_issues,MARLIN BP,MBP-1694,In Progress,,2025-07-09T14:38:02.000+0800,TTR: T193 CHROME disable pre calibration audit,Others,,,,TTR: T193 test time reduction - pre audit
 jira_issues,MARLIN BP,MBP-1695,Resolved,,2025-07-09T14:46:55.000+0800,Add 4AY103 support,Others,,,,
 jira_issues,MARLIN BP,MBP-1696,Resolved,,2025-07-09T22:16:28.000+0800,VARCAP_PROC Drive Attribute bugfix for hybrid process flow,Others,,,,
 jira_issues,MARLIN BP,MBP-1697,Open,,2025-07-10T03:04:59.000+0800,MarlinBP: T451 TTR by RMM SS mode + Zero Latency,Others,,,,
@@ -6488,7 +6488,7 @@ jira_issues,MARLIN BP,MBP-1700,Resolved,,2025-07-10T22:44:17.000+0800,CLONE - Ad
 jira_issues,MARLIN BP,MBP-1701,Resolved,,2025-07-11T04:17:35.000+0800,Create config and start checkout of 5.0.2A LOS CMR,Others,,,,
 jira_issues,MARLIN BP,MBP-1702,Resolved,,2025-07-11T04:18:33.000+0800,Create config and start checkout of 5.0.3 OWL CMR,Others,,,,
 jira_issues,MARLIN BP,MBP-1703,Resolved,,2025-07-12T00:50:48.000+0800,Start 20hd SMR LOS drives in LCO checkout of 5.0.2A,Others,,,,
-jira_issues,MARLIN BP,MBP-1704,In Progress,,2025-07-15T23:32:31.000+0800,CLONE - TTR: Reduce redundant zones test of VBAR_ATI on Marlin,Others,,Reduce redundant zones test of VBAR_ATI,,
+jira_issues,MARLIN BP,MBP-1704,In Progress,,2025-07-15T23:32:31.000+0800,CLONE - TTR: Reduce redundant zones test of VBAR_ATI on Marlin,Others,,Reduce redundant zones test of VBAR_ATI,,   VBAR ATI reduce redundance
 jira_issues,MARLIN BP,MBP-1705,Open,,2025-07-15T23:40:28.000+0800,"CLONE - Project to remove UACT1 ""milli"" actuator Bode",Others,,"Project to remove UACT1 ""milli"" actuator",,Remove UACT1 milli actuator Bode
 jira_issues,MARLIN BP,MBP-1706,Resolved,,2025-07-15T23:42:57.000+0800,"CLONE - TTR: T282 reduce ""idle time""",Others,,"TTR: T282 reduce ""idle time""",,T282 Idle time reduction
 jira_issues,MARLIN BP,MBP-1707,Resolved,,2025-07-15T23:47:01.000+0800,CLONE - TTR: Further Test Time Reduction In T282 - Bode Convergence Check,Others,,TTR: Further Test Time Reduction In T282 - Bode Convergence Check,,Bode convergence
