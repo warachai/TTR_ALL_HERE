@@ -16,7 +16,7 @@ from streamlit import session_state as ss
 import uuid
 
 st.set_page_config(page_title="Task View", layout="wide")
-
+required_cols_plan = ['OPERATION', 'Task_name', 'Saving']
 user_review_list = ["DISCARD", 'REVIEWED' ]  # Example list of users to ignore
 ignore_user_review_list = ["DISCARD", ]  # Example list of users to ignore
 # ---------------------------------------------------------
@@ -1055,8 +1055,7 @@ with st.expander("Plan Validation", expanded=False):
         ,
         key=f"{key_prefix}_search_mode"
         )
-
-
+            
         df_f = apply_filter(
             df,
             filter_text_tt_op,
@@ -1064,12 +1063,13 @@ with st.expander("Plan Validation", expanded=False):
             ["program", "config", "pco", "Category", "SubCat"],
         )
 
-        # If no data selected (empty df) show blank table immediately
-        if df_f.empty:
-            st.dataframe(pd.DataFrame(), use_container_width=True, height=8*32)
-            return
-        if not has_query_params:
-            return
+        # # If no data selected (empty df) show blank table immediately
+        # if df_f.empty:
+        #     st.dataframe(pd.DataFrame(), use_container_width=True, height=8*32)
+        #     return
+        # if not has_query_params:
+        #     return
+
         if groupby_cols:
             # Create pivot table with specified rows, columns, and values
             df_view = df_f.pivot_table(
@@ -1089,22 +1089,38 @@ with st.expander("Plan Validation", expanded=False):
                     flat = agg + (('_' + '_'.join(rest)) if rest else '')
                     flat_cols.append(flat)
                 df_view.columns = flat_cols
+
             df_view.reset_index(inplace=True)
 
 
             # If exactly two TestTime columns, compute diff (first minus second)
             #Join from tt_plan to get Task_name and Saving columns
             # Build tt_plan dataframe with necessary columns
-            required_cols = ['OPERATION', 'Task_name', 'Saving']
+
 
             if master_plan_filter:
                 df_tt_plan = getDataFrameFromMasterPlan(current_tasks_org, master_plan_filter[0])
-                df_tt_plan = df_tt_plan[required_cols]
+                df_tt_plan = df_tt_plan[required_cols_plan]
+
+                #st.write(f"Filtered Master Plan tasks: {len(df_tt_plan)} rows")
+
 
             else:
-                df_tt_plan = current_tasks_org[required_cols]
+                df_tt_plan = current_tasks_org[required_cols_plan]
+                #st.write(f"Filtered Master Plan tasks else: {len(df_tt_plan)} rows")
 
-                
+
+            df_tt_plan = apply_filter(
+            df_tt_plan,
+            filter_text_tt_op,
+            logic,
+            required_cols_plan,
+            ) 
+            # st.write(f"Filtered Master Plan tasks apply_filter: {len(df_tt_plan)} rows")     
+            # st.write(df_tt_plan)     
+
+            # st.write(f"Filtered Master Plan tasks apply_filter: {len(df_tt_plan)} rows")      
+
             if 'OPERATION' in df_view.columns:
                 df_view = pd.concat([df_view, df_tt_plan], ignore_index=True, sort=False)
 
@@ -1239,7 +1255,15 @@ with st.expander("Plan Validation", expanded=False):
             df_view["OPERATION"] = pd.Categorical(df_view["OPERATION"], categories=custom_order, ordered=True)
             df_view = df_view.sort_values("OPERATION")
         
-
+        # Download filtered data
+        csv = df_f.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download Data as CSV",
+            data=csv,
+            file_name="test_time_by_oper.csv",
+            mime="text/csv",
+            key=f"{key_prefix}_download_btn"
+        )
 
 
         #st.dataframe(df_view, use_container_width=True, height=15*32)
@@ -1379,7 +1403,7 @@ with st.expander("Plan Validation", expanded=False):
     # -------------------------------------------------------------------
     # Bottom: Test Time By State
     # -------------------------------------------------------------------
-    with st.expander("Test Time By State", expanded=False):
+    with st.expander("Test Time By State", expanded=True):
         
         st.markdown('<div class="section-title">Test Time By State</div>', unsafe_allow_html=True)
 
@@ -1388,12 +1412,13 @@ with st.expander("Plan Validation", expanded=False):
         else:
             df_state = load_merged_test_time_by_state_detail().copy()
 
-            c1_tt, c2_tt = st.columns(2)
+            c1_tt, c2_tt, c3_tt = st.columns((3,1,1))
             with c1_tt:
                 filter_text_tt_op_tt = st.text_input(
                 "Filter Text Box",
                 "",
                 placeholder="Search in all columns...",
+                help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP \n- [STATE:STATE_NAME, OP:OPERATION, ttr_display]",
                 key="filter_text_tt_op_tt_test"
                 )
 
@@ -1407,14 +1432,88 @@ with st.expander("Plan Validation", expanded=False):
                 
             )
 
+            with c3_tt:
+                view_type_st = st.selectbox(
+                        "View Type",
+                        ["All State", "TTR State"],
+                        index=0,
+                        help="Choose how view the state data.",
+                        key="view_type_st"
+                    )
+            # df_state = apply_filter_flex(
+            #     df_state,
+            #     filter_text_tt_op_tt,
+            #     logic_tt,
+            #     ["program", "config", "pco", "STATE_NAME", "OPERATION"],
+            # )
 
-            df_state = apply_filter(
-                df_state,
-                filter_text_tt_op_tt,
-                logic_tt,
-                ["program", "config", "pco", "STATE_NAME", "OPERATION"],
-            )
+            required_cols_plan_state = required_cols_plan + ["STATE_NAME",]
+            # st.write(f"required_cols_plan_state:",required_cols_plan_state)            
+            # st.write(f"Required cols plan state:",current_tasks_org)
+
+            df_tt_plan = getDataFrameFromMasterPlan(current_tasks_org, master_plan_filter[0])
             
+            df_tt_plan = df_tt_plan[required_cols_plan_state]
+            
+                #st.write(f"Filtered Master Plan tasks else: {len(df_tt_plan)} rows")
+            def combine_text(row):
+                return " | ".join(f"{t} ({s})" for t, s in zip(row["Task_name"], row["Saving"]))
+    
+
+            # df_tt_plan = apply_filter(
+            #     df_tt_plan,
+            #     filter_text_tt_op_tt,
+            #     logic_tt,
+            #     required_cols_plan_state,
+            # ) 
+
+            st.write(f"Filtered Master Plan tasks: before {len(df_tt_plan)} rows")
+            # Group and collect Task_name / Saving into separate list columns with new names
+            # Allow OPERATION to be null, but STATE_NAME must not be null
+            df_tt_plan_group = (
+                df_tt_plan[df_tt_plan["STATE_NAME"].notna()]
+                .groupby(["OPERATION", "STATE_NAME"], dropna=False)
+                .agg(
+                    Task_name_list=("Task_name", list),
+                    Saving_list=("Saving", list),
+                )
+                .reset_index()
+                
+            )
+
+            df_tt_plan_group = df_tt_plan_group[df_tt_plan_group["OPERATION"].notna() & df_tt_plan_group["STATE_NAME"].notna()]
+
+            st.write(f"Filtered Master Plan tasks: after {len(df_tt_plan_group)} rows")
+
+            # Build display string safely (avoid returning list/Series which caused assignment ValueError)
+            def build_display(task_list, saving_list):
+                task_list = task_list if isinstance(task_list, list) else [task_list]
+                saving_list = saving_list if isinstance(saving_list, list) else [saving_list]
+                return " | ".join(
+                    f"{t} ({s})" for t, s in zip(task_list, saving_list)
+                )
+            
+            df_tt_plan_group["ttr_display"] = [
+                build_display(t_list, s_list)
+                for t_list, s_list in zip(
+                    df_tt_plan_group["Task_name_list"], df_tt_plan_group["Saving_list"]
+                )
+            ]
+
+            # Sum of savings per group (handle non-numeric gracefully)
+            def _safe_sum(v):
+                try:
+                    return sum(x for x in v if pd.notnull(x))
+                except TypeError:
+                    return None
+            df_tt_plan_group["saving_sum"] = df_tt_plan_group["Saving_list"].apply(_safe_sum)
+
+            df_tt_plan_group = df_tt_plan_group.drop(['Task_name_list', 'Saving_list'], axis=1)
+
+            st.write("TASK  ", df_tt_plan_group)
+            
+            
+
             if not df_state.empty:
 
                 # Group by state and calculate mean and count
@@ -1427,6 +1526,7 @@ with st.expander("Plan Validation", expanded=False):
                         aggfunc={"TestTime(hrs)": "mean", "N": "sum"},
                         fill_value=0
                     ).reset_index()
+
 
                     # Flatten MultiIndex columns into readable single-level names
                     def _flatten(col):
@@ -1446,11 +1546,24 @@ with st.expander("Plan Validation", expanded=False):
                     # Reorder columns: fixed + test time + counts
                     state_summary = state_summary[fixed + tt_cols + n_cols]
 
+
                     # If exactly two TestTime columns, compute diff (first minus second)
                     if len(tt_cols) == 2:
                         state_summary["diff_TestTime(hrs)"] = state_summary[tt_cols[0]] - state_summary[tt_cols[1]]
                     elif len(tt_cols) > 2:
                         st.info("More than two TestTime groups present; diff not computed.")
+
+                    if len(df_tt_plan_group) > 0:
+                        state_summary = pd.merge(
+                            state_summary,
+                            df_tt_plan_group,
+                            on=["OPERATION", "STATE_NAME"],
+                            how="left"
+                        )
+
+                    else:
+                        state_summary['ttr_display'] = None
+                        state_summary['saving_sum'] = None
 
                     # Ensure custom order is applied to OPERATION column and sort by STATE_NAME
                     custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
@@ -1467,6 +1580,27 @@ with st.expander("Plan Validation", expanded=False):
                     for c in float_like_cols:
                         if c in state_summary.columns:
                             state_summary[c] = pd.to_numeric(state_summary[c], errors='coerce').round(2)
+
+                    #st.write(f"Before Applying flexible filter... {len(state_summary)}")
+
+                    if view_type_st == "TTR State":
+                        state_summary = state_summary[state_summary['ttr_display'].notna()]
+
+                    col_alias_state = {
+                        "STATE": "STATE_NAME",
+                        "OP": "OPERATION",
+                        "ttr": "ttr_display",
+                    }
+                    state_summary = apply_filter_flex(
+                        state_summary,
+                        filter_text_tt_op_tt,
+                        logic_tt,
+                        ["STATE_NAME", "OPERATION", "ttr_display"],
+                        col_alias=col_alias_state
+                    )
+                    #st.write(f"After Applying flexible filter... {len(state_summary)}")
+
+                    
 
                     # Add TOTAL row summing numeric columns of current display
                     fixed = ["program", "OPERATION", "STATE_NAME"]
@@ -1485,6 +1619,9 @@ with st.expander("Plan Validation", expanded=False):
                         if row.name == len(state_summary) - 1:  # last row
                             return ['font-weight: bold; color: Black;'] * len(row)
                         return [''] * len(row)
+                    
+
+                    
 
                     styled = state_summary.style.apply(highlight_last_row, axis=1)
 
@@ -1602,6 +1739,15 @@ with st.expander("Plan Validation", expanded=False):
             else:
                 st.info("No filtered data available. Query data above to view distribution.")
 
+            csv = df_state.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Download Data as CSV",
+                data=csv,
+                file_name="test_time_by_state.csv",
+                mime="text/csv",
+                key="test_time_by_state_download_btn"
+            )
+
     with st.expander("Test Time By Test", expanded=False):
         st.markdown('<div class="section-title">Test Time By Test</div>', unsafe_allow_html=True)
 
@@ -1622,7 +1768,7 @@ with st.expander("Plan Validation", expanded=False):
                 "Filter Text Box",
                 "",
                 placeholder="Search in all columns...",
-                help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP TEST:275\n- [STATE:STATE_NAME, OP:OPERATION, PARM:PARAMETER_NAME, TEST:TEST_NUMBER]",
+                help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP TEST:275\n- [STATE:STATE_NAME, OP:OPERATION, ttr:ttr_display]",
                 key="filter_text_tt_op_tt"
                 )
 
@@ -1653,6 +1799,18 @@ with st.expander("Plan Validation", expanded=False):
                 [ "STATE_NAME", "OPERATION", 'TEST_NUMBER', 'PARAMETER_NAME'],
                 col_alias=col_alias
             )
+
+            required_cols_plan_test = required_cols_plan + ["STATE_NAME",'TEST_NUMBER', 'PARAMETER_NAME']
+
+            df_tt_test_plan = getDataFrameFromMasterPlan(current_tasks_org, master_plan_filter[0])
+            
+            df_tt_test_plan = df_tt_test_plan[required_cols_plan_test]
+
+            df_tt_test_plan = df_tt_test_plan[df_tt_test_plan['TEST_NUMBER'].notna()]
+            
+            st.write(f"Filtered Master Plan tasks:  {len(df_tt_test_plan)} rows")
+            st.write(df_tt_test_plan)
+
             
             if not df_test.empty:
                 # Example: group by a column that exists, e.g. 'OPERATION' or 'STATE_NAME'
