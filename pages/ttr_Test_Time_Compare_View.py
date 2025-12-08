@@ -870,7 +870,15 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
         df_view = df_view.sort_values("OPERATION")
     st.dataframe(df_view, use_container_width=True, height=15*32)
 
-
+    # Download filtered data
+    csv = df_f.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="Download Data as CSV",
+        data=csv,
+        file_name="test_time_by_oper.csv",
+        mime="text/csv",
+        key=f"{key_prefix}_download_btn"
+    )
 # -------------------------------------------------------------------
 # Middle: Test Time
 # title, df, key_prefix, groupby_cols=None
@@ -1119,6 +1127,15 @@ with st.expander("Test Time By State", expanded=False):
         else:
             st.info("No filtered data available. Query data above to view state-wise test time.")
 
+        csv = df_state.to_csv(index=False).encode('utf-8')
+        st.download_button(
+        label="Download Data as CSV",
+        data=csv,
+        file_name="test_time_by_state.csv",
+        mime="text/csv",
+        key="test_time_by_state_download_btn"
+        )
+
         plot_graph = st.checkbox("Plot Graph", value=False)
 
         # Use filtered data if available
@@ -1278,6 +1295,8 @@ with st.expander("Test Time By Test", expanded=False):
             [ "STATE_NAME", "OPERATION", 'TEST_NUMBER', 'PARAMETER_NAME'],
             col_alias=col_alias
         )
+
+        st.write(f"Filtered rows: {len(df_test)}")
         
         if not df_test.empty:
             # Example: group by a column that exists, e.g. 'OPERATION' or 'STATE_NAME'
@@ -1400,14 +1419,14 @@ with st.expander("Test Time By Test", expanded=False):
                 suppressRowClickSelection=False,
             )
 
-            # Export button for filtered data
-            st.download_button(
-                label="Export to CSV",
-                data=tt_summary.to_csv(index=False).encode("utf-8"),
-                file_name="test_time_by_test.csv",
-                mime="text/csv",
-            )
-
+            # csv = df_test.to_csv(index=False).encode('utf-8')
+            # st.download_button(
+            # label="Download Data as CSV",
+            # data=csv,
+            # file_name="test_time_by_test.csv",
+            # mime="text/csv",
+            # key="test_time_by_test_download_btn"
+            # )
 
         else:
             st.info("No filtered data available. Query data above to view state-wise test time.")
