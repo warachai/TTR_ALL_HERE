@@ -16,6 +16,30 @@ st.set_page_config(page_title="Test Time View", layout="wide")
 
 
 test_time_folder = config.TT_HISTORY_PATH
+def getPCOColumnOrder():
+    selected = {}
+    #pco_selected = {}
+    pco_selected = []
+    order_num = 0
+    params_local = st.query_params  # safe to call here; independent of later parsing
+    for idx in range(2):
+        prog_raw = params_local.get(f"prog_{idx}", "NONE")
+        cfg_raw = params_local.get(f"cfg_{idx}", "NONE")
+        pco_raw = params_local.get(f"pco_{idx}", "NONE")
+        # Handle list values (Streamlit may store as list) and normalize
+        def _norm(v):
+            if isinstance(v, list):
+                return v[0] if v else "NONE"
+            return v if isinstance(v, str) else "NONE"
+        selected[idx] = {
+            "program": _norm(prog_raw),
+            "config": _norm(cfg_raw),
+            "pco": _norm(pco_raw),
+        }
+        pco_selected.append(_norm(pco_raw))
+        #pco_selected[_norm(pco_raw)] = order_num
+        order_num += 1
+    return pco_selected
 
 def add_violin_labels(
     fig,
@@ -166,7 +190,7 @@ def load_merged_test_time_by_test():
                 user_selected.append(path)
             #st.write("path :",path)
 
-    
+    count_loaded = 0
     for root, dirs, files in os.walk(test_time_folder):
         if source_file in files:
             filepath = os.path.join(root, source_file)
@@ -174,14 +198,12 @@ def load_merged_test_time_by_test():
             # Extract hierarchy from path: R:\Test_Time_Hist\{program}\{config}\{pco}\DRV_INV.csv
             rel_path = os.path.relpath(filepath, test_time_folder)
             parts = rel_path.split(os.sep)
-
-
             
             if filepath in user_selected:  # program/config/pco/filename
                 try:
                     df = pd.read_csv(filepath)
                     # Add the three hierarchy columns at the front
-                    df.insert(0, "program", parts[0])
+                    df.insert(0, "program", str(count_loaded) + parts[0])
                     df.insert(1, "config", parts[1])
                     df.insert(2, "pco", parts[2])
                     
@@ -195,6 +217,7 @@ def load_merged_test_time_by_test():
                     dfs.append(df)
                 except Exception as e:
                     st.warning(f"Could not load {filepath}: {e}")
+        count_loaded += 1
     
     if dfs:
         merged_df = pd.concat(dfs, ignore_index=True)
@@ -437,7 +460,7 @@ def load_merged_drv_inv():
                 user_selected.append(path)
             #st.write("path :",path)
 
-    
+    count_loaded = 0
     for root, dirs, files in os.walk(test_time_folder):
         if "DRV_INV.csv" in files:
             filepath = os.path.join(root, "DRV_INV.csv")
@@ -460,12 +483,15 @@ def load_merged_drv_inv():
                     # Use OPERATION as Category, SUB_BUILD_GROUP as SubCat for filtering
                     if "OPERATION" in df.columns:
                         df["Category"] = df["OPERATION"]
+
                     if "SUB_BUILD_GROUP" in df.columns:
                         df["SubCat"] = df["SUB_BUILD_GROUP"]
                     
                     dfs.append(df)
                 except Exception as e:
                     st.warning(f"Could not load {filepath}: {e}")
+
+            count_loaded += 1
     
     if dfs:
         merged_df = pd.concat(dfs, ignore_index=True)
@@ -585,7 +611,7 @@ with st.expander("Programs / Config / PCO", expanded=False):
                 available_pcos = get_pco_options_for_config(prog, cfg)
                 pco_idx = available_pcos.index(pco_default) if pco_default in available_pcos else 0
                 pco = st.selectbox(
-                    "PCO",
+                    "Group",
                     available_pcos,
                     index=pco_idx,
                     key=f"pco_{idx}",
@@ -810,13 +836,13 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
     if not has_query_params:
         return
     if groupby_cols:
-        # Create pivot table with specified rows, columns, and values
         df_view = df_f.pivot_table(
             index=[ "OPERATION"],
             columns=["program","pco", "config"],
             values="TEST_TIME",
             aggfunc=["mean", "count"],
             fill_value=0
+            
         )
         # Flatten MultiIndex columns (mean_pco_config, count_pco_config)
         if isinstance(df_view.columns, pd.MultiIndex):
@@ -856,9 +882,20 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
             total_row["OPERATION"] = "Total"
             df_view = pd.concat([df_view, pd.DataFrame([total_row])], ignore_index=True)
 
+            column_order = getPCOColumnOrder()
+            #st.write("Column order:", column_order, len(column_order)) 
+            if len(column_order) == 2:
+                cols = df_view.columns.tolist()
+                # Reorder TestTime and N columns based on column_order
+                #st.write("Columns before reordering:", cols, column_order)
+                if column_order[0] not in cols[1]:
+                    st.write("Reordering columns for display...")
+                    cols[1], cols[2],cols[3], cols[4]  = cols[2], cols[1], cols[4], cols[3]
+                    df_view = df_view[cols]            
+
             tt_cols = [c for c in df_view.columns if c.startswith("mean_")]
             if len(tt_cols) == 2:
-                df_view["diff_TestTime(hrs)"] = df_view[tt_cols[0]] - df_view[tt_cols[1]]            
+                df_view["Diff(Hrs.)"] = df_view[tt_cols[0]] - df_view[tt_cols[1]]            
     else:
         df_view = df_f
 
@@ -868,7 +905,19 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
     if "OPERATION" in df_view.columns:
         df_view["OPERATION"] = pd.Categorical(df_view["OPERATION"], categories=custom_order, ordered=True)
         df_view = df_view.sort_values("OPERATION")
-    st.dataframe(df_view, use_container_width=True, height=15*32)
+    
+    order_cols = ['OPERATION']
+
+    for col in df_view.columns:
+        if col not in order_cols and col.startswith("mean_"):
+            order_cols.append(col)
+
+    df_view.columns = order_cols + [col for col in df_view.columns if col not in order_cols]
+
+
+    # Set fixed width for columns 1-5 (after OPERATION)
+    col_widths = {col: {"width": 120} for col in df_view.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
+    st.dataframe(df_view, use_container_width=True, column_config=col_widths, height=15*32)
 
     # Download filtered data
     csv = df_f.to_csv(index=False).encode('utf-8')
@@ -1052,14 +1101,15 @@ with st.expander("Test Time By State", expanded=False):
 
             # Group by state and calculate mean and count
             if "STATE_NAME" in df_state.columns:
-                # Build pivot with multi-index columns (value, aggfunc, pco, config)
+
                 state_summary = df_state.pivot_table(
                     index=[ "OPERATION", "STATE_NAME"],
-                    columns=["program","pco", "config"],
+                    columns=["pco"], #"program","pco", "config"
                     values=["TestTime(hrs)", "N"],
                     aggfunc={"TestTime(hrs)": "mean", "N": "sum"},
                     fill_value=0
                 ).reset_index()
+
 
                 # Flatten MultiIndex columns into readable single-level names
                 def _flatten(col):
@@ -1068,6 +1118,14 @@ with st.expander("Test Time By State", expanded=False):
                     parts = [str(p) for p in col if p not in ("", None)]
                     return "_".join(parts)
                 state_summary.columns = [_flatten(c) for c in state_summary.columns]
+
+                column_order = getPCOColumnOrder()
+                cols = state_summary.columns.tolist()
+                if len(column_order) == 2 and len(cols) >= 6:
+                    # Reorder TestTime and N columns based on column_order
+                    if column_order[0] not in cols[2]:
+                        cols[2], cols[3],cols[4], cols[5]  = cols[3], cols[2], cols[5], cols[4]
+                        state_summary = state_summary[cols]
 
                 fixed = ["OPERATION", "STATE_NAME"]
                 value_cols = [c for c in state_summary.columns if c not in fixed]
@@ -1119,9 +1177,19 @@ with st.expander("Test Time By State", expanded=False):
                         return ['font-weight: bold; color: Black;'] * len(row)
                     return [''] * len(row)
 
+                # column_order = getPCOColumnOrder()
+                # if len(column_order) == 2:
+                #     cols = state_summary.columns.tolist()
+                #     # Reorder TestTime and N columns based on column_order
+                #     if column_order[0] not in cols[2]:
+                #         cols[2], cols[3],cols[4], cols[5]  = cols[3], cols[2], cols[5], cols[4]
+                #         state_summary = state_summary[cols]
+                        
                 styled = state_summary.style.apply(highlight_last_row, axis=1)
 
-                st.dataframe(styled, use_container_width=True, height=15*32)
+                col_widths = {col: {"width": 120} for col in state_summary.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
+
+                st.dataframe(styled, use_container_width=True, column_config=col_widths, height=15*32)
             else:
                 st.warning("The dataset does not contain a 'STATE' column.")
         else:
@@ -1298,14 +1366,15 @@ with st.expander("Test Time By Test", expanded=False):
 
         st.write(f"Filtered rows: {len(df_test)}")
         
-        if not df_test.empty:
+        if not df_test.empty and len(df_test) < 3000:
             # Example: group by a column that exists, e.g. 'OPERATION' or 'STATE_NAME'
             total_group_operation = df_test.groupby(["pco", "config"]).size().reset_index(name='count')
             total_group_operation['GROUP_NAME'] = total_group_operation['pco'] + "_" + total_group_operation['config']
             group_name_list = total_group_operation['GROUP_NAME'].tolist()
 
             #st.write("all operations mmm:", group_name_list)
-
+            # column_order = getPCOColumnOrder()
+            # df_test["pco"] = pd.Categorical(df_test["pco"], categories=column_order, ordered=True)
             tt_summary = df_test.pivot_table(
                     index=['TEST_NUMBER', 'PARAMETER_NAME',"STATE_NAME", "OPERATION"],
                     columns=["pco", "config"],
@@ -1326,8 +1395,23 @@ with st.expander("Test Time By Test", expanded=False):
                 for col in tt_summary.columns
             ]
 
-            test_time_cols = [c for c in tt_summary.columns if c.startswith("TT_")]
 
+            column_order = getPCOColumnOrder()
+            cols = tt_summary.columns.tolist()
+            cols[4], cols[5],cols[6], cols[7]  = cols[6], cols[7], cols[4], cols[5]
+            tt_summary = tt_summary[cols]
+            #st.write("Column order:", column_order, len(column_order)) 
+            if len(column_order) == 2:
+                cols = tt_summary.columns.tolist()
+                # Reorder TestTime and N columns based on column_order
+                #st.write("Columns before reordering:", cols, column_order)
+                if column_order[0] not in cols[4]:
+                    #st.write("Reordering columns for display...")
+                    cols[4], cols[5],cols[6], cols[7]  = cols[5], cols[4], cols[7], cols[6]
+                    tt_summary = tt_summary[cols]
+
+            cols = tt_summary.columns.tolist()     
+            test_time_cols = [c for c in tt_summary.columns if c.startswith("TT_")]
             if len(test_time_cols) == 2:
                 tt_summary["TT_Diff"] = tt_summary[test_time_cols[0]] - tt_summary[test_time_cols[1]]
 
@@ -1372,7 +1456,7 @@ with st.expander("Test Time By Test", expanded=False):
                 suppressAggFuncInHeader=False,
             )
 
-            grid_options = gb.build()
+            #grid_options = gb.build()
 
             # ---------------- Render AgGrid ----------------
             # grid_response = AgGrid(
@@ -1394,13 +1478,34 @@ with st.expander("Test Time By Test", expanded=False):
             }
             """)
 
-            # Render AgGrid with export button
+
+
+            # Render AgGrid with export button and fixed column widths
+            # Set column widths for key columns
+            col_widths = {
+                "TEST_NUMBER": 100,
+                "PARAMETER_NAME": 180,
+                "STATE_NAME": 120,
+                "OPERATION": 110,
+            }
+            # Add widths for TT_ and N_ columns
+            for col in tt_summary.columns:
+                if col.startswith("TT_") or col.startswith("N_") or col == "TT_Diff":
+                    col_widths[col] = 110
+
+            # Extract the list of column fields from columnDefs
+            for col, width in col_widths.items():
+                if col in tt_summary.columns:
+                    gb.configure_column(col, width=width)
+
+            grid_options = gb.build()
+
             grid_response = AgGrid(
                 tt_summary,
                 gridOptions=grid_options,
                 enable_enterprise_modules=True,
                 update_mode=GridUpdateMode.NO_UPDATE,
-                fit_columns_on_grid_load=True,
+                fit_columns_on_grid_load=False,  # Don't auto-fit, use our widths
                 height=19*32,
                 onGridReady=auto_size_js,
                 allow_unsafe_jscode=True,
