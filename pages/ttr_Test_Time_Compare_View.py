@@ -942,6 +942,48 @@ if "TEST_TIME_org" not in source_df.columns:
     source_df['TEST_TIME_org'] = pd.to_numeric(source_df['TEST_TIME'], errors='coerce').fillna(0)
     source_df['TEST_TIME'] = source_df['TEST_TIME_org'] / 3600   
 
+with st.expander("CMS Config", expanded=False):
+
+    if not source_df.empty and "OPERATION" in source_df.columns and "pco" in source_df.columns and "TEST_TIME" in source_df.columns:
+        custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+
+        pivot_df = source_df.pivot_table(
+            index=["OPERATION"],
+            columns=["pco",'CMS_CONFIG'] ,
+            values="TEST_TIME",
+            aggfunc="count",
+            fill_value=0
+        ).reset_index()
+
+        column_order = getPCOColumnOrder()
+        #st.write("Column order:", column_order, len(column_order))
+        if len(column_order) >= 2:
+       
+            # Sort columns: keep index_cols first, then others by custom order
+            index_cols = [["OPERATION", ""]]
+            pivot_cols = [c for c in pivot_df.columns ]
+            pivot_cols.pop(0)  # remove index col
+            # Sort columns by column_order for pco, then by CMS_CONFIG
+            sorted_cols = sorted(
+                pivot_cols,
+                key=lambda c: (
+                    column_order.index(c[0]) if c[0] in column_order else len(column_order),
+                    c[1]
+                )
+            )
+            #st.write(index_cols + sorted_cols)
+            #st.write(pivot_df.columns)
+            pivot_df = pivot_df[index_cols + sorted_cols]
+            pass
+
+        if "OPERATION" in pivot_df.columns:
+            pivot_df["OPERATION"] = pd.Categorical(
+                pivot_df["OPERATION"], categories=custom_order, ordered=True
+            )
+            pivot_df = pivot_df.sort_values("OPERATION")
+
+        st.dataframe(pivot_df, use_container_width=True)
+
 with st.expander("Test Time By Operation", expanded=False):
     test_time_block("Test Time", source_df, "tt_overall", groupby_cols=["program", "config", "pco", "Category"])
 
@@ -1395,25 +1437,26 @@ with st.expander("Test Time By Test", expanded=False):
                 for col in tt_summary.columns
             ]
 
-
-            column_order = getPCOColumnOrder()
             cols = tt_summary.columns.tolist()
-            cols[4], cols[5],cols[6], cols[7]  = cols[6], cols[7], cols[4], cols[5]
-            tt_summary = tt_summary[cols]
-            #st.write("Column order:", column_order, len(column_order)) 
-            if len(column_order) == 2:
-                cols = tt_summary.columns.tolist()
-                # Reorder TestTime and N columns based on column_order
-                #st.write("Columns before reordering:", cols, column_order)
-                if column_order[0] not in cols[4]:
-                    #st.write("Reordering columns for display...")
-                    cols[4], cols[5],cols[6], cols[7]  = cols[5], cols[4], cols[7], cols[6]
-                    tt_summary = tt_summary[cols]
+            if len(cols) >= 8:
+                column_order = getPCOColumnOrder()
+            
+                cols[4], cols[5],cols[6], cols[7]  = cols[6], cols[7], cols[4], cols[5]
+                tt_summary = tt_summary[cols]
+                #st.write("Column order:", column_order, len(column_order)) 
+                if len(column_order) == 2:
+                    cols = tt_summary.columns.tolist()
+                    # Reorder TestTime and N columns based on column_order
+                    #st.write("Columns before reordering:", cols, column_order)
+                    if column_order[0] not in cols[4]:
+                        #st.write("Reordering columns for display...")
+                        cols[4], cols[5],cols[6], cols[7]  = cols[5], cols[4], cols[7], cols[6]
+                        tt_summary = tt_summary[cols]
 
-            cols = tt_summary.columns.tolist()     
-            test_time_cols = [c for c in tt_summary.columns if c.startswith("TT_")]
-            if len(test_time_cols) == 2:
-                tt_summary["TT_Diff"] = tt_summary[test_time_cols[0]] - tt_summary[test_time_cols[1]]
+                cols = tt_summary.columns.tolist()     
+                test_time_cols = [c for c in tt_summary.columns if c.startswith("TT_")]
+                if len(test_time_cols) == 2:
+                    tt_summary["TT_Diff"] = tt_summary[test_time_cols[0]] - tt_summary[test_time_cols[1]]
 
             custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
 

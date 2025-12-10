@@ -43,6 +43,30 @@ current_tasks = current_tasks[current_tasks['Program'].isin(default_programs)]
 
 sub_task = pd.read_csv(config.JIRA_FILE_PATH)
 
+def getPCOColumnOrder():
+    selected = {}
+    #pco_selected = {}
+    pco_selected = []
+    order_num = 0
+    params_local = st.query_params  # safe to call here; independent of later parsing
+    for idx in range(2):
+        prog_raw = params_local.get(f"prog_{idx}", "NONE")
+        cfg_raw = params_local.get(f"cfg_{idx}", "NONE")
+        pco_raw = params_local.get(f"pco_{idx}", "NONE")
+        # Handle list values (Streamlit may store as list) and normalize
+        def _norm(v):
+            if isinstance(v, list):
+                return v[0] if v else "NONE"
+            return v if isinstance(v, str) else "NONE"
+        selected[idx] = {
+            "program": _norm(prog_raw),
+            "config": _norm(cfg_raw),
+            "pco": _norm(pco_raw),
+        }
+        pco_selected.append(_norm(pco_raw))
+        #pco_selected[_norm(pco_raw)] = order_num
+        order_num += 1
+    return pco_selected
 
 # Define modal function at top level
 @st.dialog("Edit Tasks", width="large")
@@ -842,7 +866,7 @@ with st.expander("Plan Validation", expanded=False):
                     available_pcos = get_pco_options_for_config(prog, cfg)
                     pco_idx = available_pcos.index(pco_default) if pco_default in available_pcos else 0
                     pco = st.selectbox(
-                        "PCO",
+                        "Eval",
                         available_pcos,
                         index=pco_idx,
                         key=f"pco_{idx}",
@@ -858,6 +882,9 @@ with st.expander("Plan Validation", expanded=False):
                 help="Apply current selections and update URL with non-NONE values"
             )
             if query_btn_pressed:
+
+
+
                 param_pairs = []
                 for idx, (prog, cfg, pco) in enumerate([sel1, sel2]):
                     if prog != "NONE":
@@ -1072,6 +1099,7 @@ with st.expander("Plan Validation", expanded=False):
 
         if groupby_cols:
             # Create pivot table with specified rows, columns, and values
+        
             df_view = df_f.pivot_table(
                 index=[ "OPERATION"],
                 columns=["program","pco", "config"],
@@ -1096,7 +1124,7 @@ with st.expander("Plan Validation", expanded=False):
             # If exactly two TestTime columns, compute diff (first minus second)
             #Join from tt_plan to get Task_name and Saving columns
             # Build tt_plan dataframe with necessary columns
-
+            
 
             if master_plan_filter:
                 df_tt_plan = getDataFrameFromMasterPlan(current_tasks_org, master_plan_filter[0])
@@ -1126,7 +1154,23 @@ with st.expander("Plan Validation", expanded=False):
 
 
                 # 2) Build AgGrid options
+            cols = df_view.columns.tolist()
+            #st.write("Column cols:", cols, len(cols)) 
+            if len(cols) >= 7:
+                column_order = getPCOColumnOrder()
             
+                #cols[4], cols[5],cols[6], cols[7]  = cols[6], cols[7], cols[4], cols[5]
+                df_view = df_view[cols]
+                #st.write("Column order:", column_order, len(column_order)) 
+                if len(column_order) == 2:
+                    cols = df_view.columns.tolist()
+                    # Reorder TestTime and N columns based on column_order
+                    #st.write("Columns before reordering:", cols, column_order)
+                    if column_order[0] not in cols[1]:
+                        #st.write("Reordering columns for display...")
+                        cols[1], cols[2],cols[3], cols[4]  = cols[2], cols[1], cols[4], cols[3]
+                        df_view = df_view[cols]
+
             gb = GridOptionsBuilder.from_dataframe(df_view)
             # Add blank value ("") to the end of the custom order
             custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2", None, "TOTAL"]
@@ -1146,7 +1190,7 @@ with st.expander("Plan Validation", expanded=False):
             gb.configure_column(
             "OPERATION",
             rowGroup=True,
-            hide=False,
+            hide=True,
             sort="asc",
             sortIndex=0,
             comparator=JsCode(js_comparator_code)
@@ -1180,7 +1224,7 @@ with st.expander("Plan Validation", expanded=False):
             #     lambda row: row['Diff'] - row['Saving'] if pd.notnull(row.get('Saving')) and pd.notnull(row.get('Diff')) else None,
             #     axis=1
             # )
-            gb.configure_column('Expected',aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
+            #gb.configure_column('Expected',aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
 
             # Add TOTAL row summing numeric columns of current display
             numeric_cols = [c for c in df_view.columns if pd.api.types.is_numeric_dtype(df_view[c])]
@@ -1226,7 +1270,7 @@ with st.expander("Plan Validation", expanded=False):
                 enable_enterprise_modules=True,
                 update_mode=GridUpdateMode.NO_UPDATE,
                 fit_columns_on_grid_load=True,
-                height=19*32,
+                height=15*32,
                 onGridReady=auto_size_js,
                 allow_unsafe_jscode=True,
                 custom_js=[
@@ -1268,7 +1312,7 @@ with st.expander("Plan Validation", expanded=False):
 
         #st.dataframe(df_view, use_container_width=True, height=15*32)
 
-        st.write("MMM debug")
+        #st.write("MMM debug")
   
     # -------------------------------------------------------------------
     # Middle: Test Time
@@ -1283,6 +1327,49 @@ with st.expander("Plan Validation", expanded=False):
     if "TEST_TIME_org" not in source_df.columns:
         source_df['TEST_TIME_org'] = pd.to_numeric(source_df['TEST_TIME'], errors='coerce').fillna(0)
         source_df['TEST_TIME'] = source_df['TEST_TIME_org'] / 3600   
+
+    with st.expander("CMS Config", expanded=False):
+
+        if not source_df.empty and "OPERATION" in source_df.columns and "pco" in source_df.columns and "TEST_TIME" in source_df.columns:
+            custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+
+            pivot_df = source_df.pivot_table(
+                index=["OPERATION"],
+                columns=["pco",'CMS_CONFIG'] ,
+                values="TEST_TIME",
+                aggfunc="count",
+                fill_value=0
+            ).reset_index()
+
+            column_order = getPCOColumnOrder()
+            #st.write("Column order:", column_order, len(column_order))
+            if len(column_order) >= 2:
+        
+                # Sort columns: keep index_cols first, then others by custom order
+                index_cols = [["OPERATION", ""]]
+                pivot_cols = [c for c in pivot_df.columns ]
+                pivot_cols.pop(0)  # remove index col
+                # Sort columns by column_order for pco, then by CMS_CONFIG
+                sorted_cols = sorted(
+                    pivot_cols,
+                    key=lambda c: (
+                        column_order.index(c[0]) if c[0] in column_order else len(column_order),
+                        c[1]
+                    )
+                )
+                #st.write(index_cols + sorted_cols)
+                #st.write(pivot_df.columns)
+                pivot_df = pivot_df[index_cols + sorted_cols]
+                pass
+
+            if "OPERATION" in pivot_df.columns:
+                pivot_df["OPERATION"] = pd.Categorical(
+                    pivot_df["OPERATION"], categories=custom_order, ordered=True
+                )
+                pivot_df = pivot_df.sort_values("OPERATION")
+
+            st.dataframe(pivot_df, use_container_width=True)
+
 
     with st.expander("Test Time By Operation", expanded=False):
         test_time_block("Test Time", source_df, "tt_overall", groupby_cols=["program", "config", "pco", "Category"])
@@ -1467,7 +1554,7 @@ with st.expander("Plan Validation", expanded=False):
             #     required_cols_plan_state,
             # ) 
 
-            st.write(f"Filtered Master Plan tasks: before {len(df_tt_plan)} rows")
+            #st.write(f"Filtered Master Plan tasks: before {len(df_tt_plan)} rows")
             # Group and collect Task_name / Saving into separate list columns with new names
             # Allow OPERATION to be null, but STATE_NAME must not be null
             df_tt_plan_group = (
@@ -1483,7 +1570,7 @@ with st.expander("Plan Validation", expanded=False):
 
             df_tt_plan_group = df_tt_plan_group[df_tt_plan_group["OPERATION"].notna() & df_tt_plan_group["STATE_NAME"].notna()]
 
-            st.write(f"Filtered Master Plan tasks: after {len(df_tt_plan_group)} rows")
+            #st.write(f"Filtered Master Plan tasks: after {len(df_tt_plan_group)} rows")
 
             # Build display string safely (avoid returning list/Series which caused assignment ValueError)
             def build_display(task_list, saving_list):
@@ -1547,12 +1634,6 @@ with st.expander("Plan Validation", expanded=False):
                     state_summary = state_summary[fixed + tt_cols + n_cols]
 
 
-                    # If exactly two TestTime columns, compute diff (first minus second)
-                    if len(tt_cols) == 2:
-                        state_summary["diff_TestTime(hrs)"] = state_summary[tt_cols[0]] - state_summary[tt_cols[1]]
-                    elif len(tt_cols) > 2:
-                        st.info("More than two TestTime groups present; diff not computed.")
-
                     if len(df_tt_plan_group) > 0:
                         state_summary = pd.merge(
                             state_summary,
@@ -1565,6 +1646,7 @@ with st.expander("Plan Validation", expanded=False):
                         state_summary['ttr_display'] = None
                         state_summary['saving_sum'] = None
 
+
                     # Ensure custom order is applied to OPERATION column and sort by STATE_NAME
                     custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
                     if "OPERATION" in state_summary.columns:
@@ -1576,6 +1658,26 @@ with st.expander("Plan Validation", expanded=False):
 
                     # Display the summary table
                     # Round floating point (TestTime and diff) to 2 decimals
+
+                    column_order = getPCOColumnOrder()
+                    #st.write("Column order:", column_order)
+                    cols = state_summary.columns.tolist()
+                    #st.write("Column cols:", cols)
+                    if len(column_order) == 2 and len(cols) >= 8:
+                        # Reorder TestTime and N columns based on column_order
+                        if column_order[0] not in cols[2]:
+                            cols[2], cols[3],cols[4], cols[5]  = cols[3], cols[2], cols[5], cols[4]
+                            state_summary = state_summary[cols]  
+                    
+                    # Separate TestTime and N columns by prefix after flattening
+                    value_cols = [c for c in state_summary.columns if c not in fixed]
+                    tt_cols = [c for c in value_cols if c.startswith("TestTime(hrs)_")]
+
+                    if len(tt_cols) == 2:
+                        state_summary["diff_TestTime(hrs)"] = state_summary[tt_cols[0]] - state_summary[tt_cols[1]]
+                    elif len(tt_cols) > 2:
+                        st.info("More than two TestTime groups present; diff not computed.")
+
                     float_like_cols = [c for c in state_summary.columns if c.startswith("TestTime(hrs)_") or c.startswith("diff_TestTime(hrs)")]
                     for c in float_like_cols:
                         if c in state_summary.columns:
@@ -1625,7 +1727,12 @@ with st.expander("Plan Validation", expanded=False):
 
                     styled = state_summary.style.apply(highlight_last_row, axis=1)
 
-                    st.dataframe(styled, use_container_width=True, height=15*32)
+                    # st.dataframe(styled, use_container_width=True, height=15*32)
+
+                    col_widths = {col: {"width": 100} for col in state_summary.columns[2:]}  # columns 1-5 (0-based, skip OPERATION)
+
+                    st.dataframe(styled, use_container_width=True, column_config=col_widths, height=15*32)
+                    
                 else:
                     st.warning("The dataset does not contain a 'STATE' column.")
             else:
@@ -1818,7 +1925,6 @@ with st.expander("Plan Validation", expanded=False):
                 total_group_operation['GROUP_NAME'] = total_group_operation['pco'] + "_" + total_group_operation['config']
                 group_name_list = total_group_operation['GROUP_NAME'].tolist()
 
-                #st.write("all operations mmm:", group_name_list)
 
                 tt_summary = df_test.pivot_table(
                         index=['TEST_NUMBER', 'PARAMETER_NAME',"STATE_NAME", "OPERATION"],
@@ -1842,8 +1948,26 @@ with st.expander("Plan Validation", expanded=False):
 
                 test_time_cols = [c for c in tt_summary.columns if c.startswith("TT_")]
 
-                if len(test_time_cols) == 2:
-                    tt_summary["TT_Diff"] = tt_summary[test_time_cols[0]] - tt_summary[test_time_cols[1]]
+                cols = tt_summary.columns.tolist()
+                if len(cols) >= 8:
+                    column_order = getPCOColumnOrder()
+                
+                    cols[4], cols[5],cols[6], cols[7]  = cols[6], cols[7], cols[4], cols[5]
+                    tt_summary = tt_summary[cols]
+                    #st.write("Column order:", column_order, len(column_order)) 
+                    if len(column_order) == 2:
+                        cols = tt_summary.columns.tolist()
+                        # Reorder TestTime and N columns based on column_order
+                        #st.write("Columns before reordering:", cols, column_order)
+                        if column_order[0] not in cols[4]:
+                            #st.write("Reordering columns for display...")
+                            cols[4], cols[5],cols[6], cols[7]  = cols[5], cols[4], cols[7], cols[6]
+                            tt_summary = tt_summary[cols]
+
+                    cols = tt_summary.columns.tolist()     
+                    test_time_cols = [c for c in tt_summary.columns if c.startswith("TT_")]
+                    if len(test_time_cols) == 2:
+                        tt_summary["TT_Diff"] = tt_summary[test_time_cols[0]] - tt_summary[test_time_cols[1]]
 
                 custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
 
