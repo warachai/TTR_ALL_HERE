@@ -13983,7 +13983,7 @@ jira_issues,TSR,TSR-6926,Completed,,2025-11-13T01:37:47.000+0800,Incorrect TA Se
 jira_issues,TSR,TSR-6927,Completed,,2025-11-13T09:21:18.000+0800,CimarronBP Myna+: Integrate FW Serial Port Noise Mitigation Script,Others,,,,
 jira_issues,TSR,TSR-6928,Development,,2025-11-13T17:31:07.000+0800,SUMMIT SMR iVBAR: New Spec to Enable VBAR_TPISME1,Others,,,,
 jira_issues,TSR,TSR-6929,New Request,,2025-11-13T23:03:35.000+0800,Bank Write to be added to LASER Burn in Test Process for both Dorado and MBP,Others,,,,
-jira_issues,TSR,TSR-6930,New Request,,2025-11-13T23:58:44.000+0800,Test 118 TTR: Remove unused Local Variables and associated code.,Others,,,,
+jira_issues,TSR,TSR-6930,New Request,,2025-11-13T23:58:44.000+0800,Test 118 TTR: Remove unused Local Variables and associated code.,Others,,,,Test 118 TTR:
 jira_issues,TSR,TSR-6931,New Request,,2025-11-14T05:28:37.000+0800,F3 Pre-Submit Validation - FWSD-13096,Others,,,,
 jira_issues,TSR,TSR-6932,New Request,,2025-11-14T06:33:19.000+0800,Improve CHROME and ZAP Transfer Functions,Others,,,,non-linear-Xfer Func TTR
 jira_issues,TSR,TSR-6933,Development Completed,,2025-11-14T18:26:26.000+0800,Test 220 SME - Fix a failure mode issue tied to removal of Enhanced VBAR Opti,Others,,,,
@@ -14006,7 +14006,7 @@ jira_issues,MARLIN BP,MBP-1974,Open,,2025-11-19T13:06:23.000+0800,Fix Incorrect 
 jira_issues,DORADO,DORADO-1383,Resolved,,2025-11-19T23:53:12.000+0800,Remove power cycles around SPFS and LFA cal,TTR,,,,FPW & SPFS Power Cycle Removal around LFA
 jira_issues,TSR,TSR-6952,New Request,,2025-11-19T15:44:44.000+0800,"Review T451 track avoidance criteria to be adjustable with number of good track it required, currently it is hardcoded and over required.",Others,,,,
 jira_issues,TSR,TSR-6951,Development,,2025-11-19T15:39:10.000+0800,Investigate other potential TTR items for CimBP,Others,,,,
-jira_issues,SUMMIT,SUMMIT-2373,Open,,2025-11-21T18:29:22.000+0800,TTR: Optimizing Cyl Skew Setting of ATS Seek in Skip Track Flaw Scan,TTR,,,,
+jira_issues,SUMMIT,SUMMIT-2373,Open,,2025-11-21T18:29:22.000+0800,TTR: Optimizing Cyl Skew Setting of ATS Seek in Skip Track Flaw Scan,TTR,,,,TTR: Optimizing Cyl Skew
 jira_issues,SUMMIT,SUMMIT-2372,Open,,2025-11-21T18:08:18.000+0800,"Optimization of SPFS GOAL Setting for Summit SMR 30TB VC (0.13u"" OCLim)",YIP,,,,
 jira_issues,SUMMIT,SUMMIT-2371,Closed,,2025-11-21T14:43:18.000+0800,Summit CMR iVBAR VBAR_SME2HMS Opti,YIP,,,,
 jira_issues,SUMMIT,SUMMIT-2370,Resolved,,2025-11-20T23:13:27.000+0800,TTR: Reduce head iteration multiple Get Servo Flaw commands to single command for all heads,TTR,,TTR: Reduce head iteration multiple Get Servo Flaw commands to single command for all heads,,Optimize DETS to retrieve flaw by drive instead by head
@@ -14116,7 +14116,7 @@ jira_issues,MARLIN,MARLINCT-2262,In Progress,,2025-12-02T00:26:20.000+0800,OEE: 
 jira_issues,MARLIN,MARLINCT-2261,Open,,2025-12-01T14:24:25.000+0800,CLONE - T230 speed up 90% slip calculation,TTR,,,,T230 speed up  slip calculation
 jira_issues,MARLIN BP,MBP-1994,Resolved,,2025-11-28T18:57:15.000+0800,Add CSO new PN,Others,,,,
 jira_issues,MARLIN BP,MBP-1993,Open,,2025-11-27T10:16:56.000+0800,Fix EC14526 at SPFS (KeyError: 19),YIP,,,,
-jira_issues,DORADO,DORADO-1410,Open,,2025-12-02T05:40:02.000+0800,Evaluation of T118 TTR improvements.,TTR,,,,
+jira_issues,DORADO,DORADO-1410,Open,,2025-12-02T05:40:02.000+0800,Evaluation of T118 TTR improvements.,TTR,,,,Test 118 TTR:
 jira_issues,DORADO,DORADO-1409,Resolved,,2025-12-01T23:13:08.000+0800,Dorado2 : BC8231-LXB1 default Write Triplets update,YIP,,,,
 jira_issues,DORADO,DORADO-1408,Open,,2025-12-01T22:47:07.000+0800,Remove LPV Margin Before VBAR_TPI_SMR_HSMR State,YIP,,,,
 jira_issues,TSR,TSR-6997,Completed,,2025-12-02T06:40:34.000+0800,Write script to analyze additional data in csv files for FIS,Others,,,,
