@@ -13926,7 +13926,7 @@ jira_issues,TSR,TSR-6868,Development,,2025-11-04T14:33:25.000+0800,Add the switc
 jira_issues,TSR,TSR-6869,Completed,,2025-11-04T22:18:18.000+0800,TA2 Certificate Provisioning UAT,Others,,,,
 jira_issues,TSR,TSR-6871,Development,,2025-11-05T06:38:43.000+0800,SF3: T298 Remove duplicate read and BER calculations,Others,,,,
 jira_issues,TSR,TSR-6872,Development Completed,,2025-11-05T18:40:31.000+0800,Test 413 - Fix a bug that is preventing Single Sided ID Squeeze from being used.,Others,,,,
-jira_issues,TSR,TSR-6873,Development,,2025-11-06T17:35:08.000+0800,T230 speed up 90% slip calculation,Others,,,,
+jira_issues,TSR,TSR-6873,Development,,2025-11-06T17:35:08.000+0800,T230 speed up 90% slip calculation,Others,,,,T230 speed up  slip calculation
 jira_issues,TSR,TSR-6874,Development Completed,,2025-11-07T00:54:05.000+0800,SF3: Change CollectEnhancedBerData to have fewer goto's,Others,,,,
 jira_issues,TSR,TSR-6875,Rejected,,2025-11-10T14:49:13.000+0800,Loophole of T236 does not restore LCW and duplicated entries in FIR and DDFIR channel setup list properly. ,Others,,,,
 jira_issues,TSR,TSR-6876,New Request,,2025-11-10T23:09:20.000+0800,Add more operations to the yield report in SBR Reporter,Others,,,,
@@ -14341,3 +14341,4 @@ jira_issues,TSR,TSR-7068,Completed,,2025-12-11T00:25:30.000+0800,rbf,Others,,,,
 jira_issues,TSR,TSR-7067,Completed,,2025-12-11T00:25:16.000+0800,remove short term,Others,,,,
 jira_issues,TSR,TSR-7066,Completed,,2025-12-11T00:24:48.000+0800,review checkin,Others,,,,
 jira_issues,TSR,TSR-7065,Completed,,2025-12-11T00:24:30.000+0800,code changes,Others,,,,
+jira_issues,DORADO,DORADO-1450,Open,,2025-12-12T15:33:47.000+0800,CLONE - T230 speed up 90% slip calculation,Others,,,,T230 speed up  slip calculation
