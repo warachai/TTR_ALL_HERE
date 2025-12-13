@@ -11,6 +11,7 @@ import numpy as np
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from st_aggrid.shared import JsCode
 import config
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Test Time View", layout="wide")
 
@@ -1094,8 +1095,45 @@ with st.expander("Test Time Distribution", expanded=False):
             legend_title=("pco" if color_arg == "pco" else None),
             margin=dict(l=10, r=10, t=40, b=10)
         )
-        st.plotly_chart(fig, use_container_width=True)
+
+        
+        event = st.plotly_chart(fig, use_container_width=True,key="violin",on_select="rerun",)
         st.caption("Distribution of TEST_TIME across selected operations and filters.")
+
+        pts = event.selection.points  # Streamlit PlotlySelectionState.points :contentReference[oaicite:2]{index=2}
+
+        # Extract SN, TS, OPER, Test Time, Group_Name from pts
+        if pts:
+            st.write("Total selected points:", len(pts))
+            violin_points_data = []
+            for pt in pts:
+                SN = pt.get("customdata", [None, None])[0]
+                TS = pt.get("customdata", [None, None])[1]
+                OPER = pt.get("x")
+                Test_Time = pt.get("y")
+                Group_Name = pt.get("legendgroup")
+                violin_points_data.append({
+                "SN": SN,
+                "TS": TS,
+                "OPER": OPER,
+                "Test Time": Test_Time,
+                "Group_Name": Group_Name
+                })
+
+            violin_points_df = pd.DataFrame(violin_points_data)
+            # Set fixed width for columns in violin_points_df display
+            col_widths = {col: {"width": 120} for col in violin_points_df.columns}
+            if len(violin_points_df.columns) > 0:
+                last_col = violin_points_df.columns[-1]
+                col_widths[last_col] = {"width": 240}
+            # Add index column starting from 1
+            violin_points_df.index = violin_points_df.index + 1
+            violin_points_df.reset_index(inplace=True)
+            violin_points_df.rename(columns={"index": "No."}, inplace=True)
+            st.dataframe(violin_points_df, use_container_width=False, column_config=col_widths, height=8*32, hide_index=True)
+
+            
+        
     else:
         st.info("No filtered data available. Query data above to view distribution.")
 
@@ -1349,8 +1387,39 @@ with st.expander("Test Time By State", expanded=False):
                 legend_title=("pco" if color_arg == "pco" else None),
                 margin=dict(l=10, r=10, t=40, b=10)
             )
-            st.plotly_chart(fig, use_container_width=True)
+            event_state = st.plotly_chart(fig, use_container_width=True,key="violin_state",on_select="rerun")
             st.caption("Distribution of TEST_TIME across selected operations and filters.")
+
+            pts_state = event_state.selection.points  # Streamlit PlotlySelectionState.points :contentReference[oaicite:2]{index=2}
+
+            # Extract SN, TS, OPER, Test Time, Group_Name from pts
+            if pts_state:
+                st.write("Total selected points:", len(pts_state))
+                violin_points_data = []
+                for pt in pts_state:
+                    SN = pt.get("customdata", [None, None])[0]
+                    TS = pt.get("customdata", [None, None])[1]
+                    OPER = pt.get("x")
+                    Test_Time = pt.get("y")
+                    Group_Name = pt.get("legendgroup")
+                    violin_points_data.append({
+                    "SN": SN,
+                    "TS": TS,
+                    "OPER-STATE": OPER,
+                    "Test Time": Test_Time,
+                    "Group_Name": Group_Name
+                    })
+                violin_points_df = pd.DataFrame(violin_points_data)
+                # Set fixed width for columns in violin_points_df display
+                col_widths = {col: {"width": 120} for col in violin_points_df.columns}
+                if len(violin_points_df.columns) > 0:
+                    last_col = violin_points_df.columns[-1]
+                    col_widths[last_col] = {"width": 240}
+                # Add index column starting from 1
+                violin_points_df.index = violin_points_df.index + 1
+                violin_points_df.reset_index(inplace=True)
+                violin_points_df.rename(columns={"index": "No."}, inplace=True)
+                st.dataframe(violin_points_df, use_container_width=False, column_config=col_widths, height=8*32, hide_index=True)
         else:
             st.info("No filtered data available. Query data above to view distribution.")
 
