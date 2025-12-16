@@ -17,8 +17,6 @@ if "data_request_text" not in ss:
 if "last_request_id" not in ss:
 	ss.last_request_id = None
 
-st.markdown("Enter your request details below. You can paste multiple lines.")
-
 def lineCount():
     lines = []
     try:
@@ -33,36 +31,7 @@ def lineCount():
 def clear_text():
     st.session_state["data_request_text_area"] = ""
 
-# Show warnings/success from submit callback
-if "submit_warning" in st.session_state:
-    st.warning(st.session_state["submit_warning"])
-    del st.session_state["submit_warning"]
-
-if "submit_success" in st.session_state:
-    st.success(st.session_state["submit_success"])
-    del st.session_state["submit_success"]
-
-# Big text box
-request_text = st.text_area(
-	label="Request Description",
-	value=ss.data_request_text,
-	help=(
-        "Describe your data request here.\n"
-        "Example:\n"
-        "plt={'FEATURE_CHECKING':'', 'JSL_SCRIPT':'ExecutePythonScript', "
-        "'PY_SCRIPT':'getSN_SBR_input.py', 'SBR_REQ':{'PRODUCT':'DORADO', 'SBR':'TKDRH434H'}, "
-        "'ATTR_FILTER': {'MEDIA_FORMAT':'HSMR', 'NUM_HEADS':'20'}, "
-        "'SAVE_NAME':'DRD_20HD_HSMR_TKDRH434H', 'MAX_QTY':500 }"
-    ),
-	height=300,
-	key="data_request_text_area",
-)
-
-# Character count / simple validation
-st.caption(f"Characters: {len(request_text)}")
-
-     
-def submit_request():
+def submit_request_gui():
     text = request_text.strip()
     if not text:
         st.warning("Please enter a description before submitting.")
@@ -90,17 +59,182 @@ def submit_request():
                 st.error(f"Failed to record request: {e}")
 
             clear_text()
+# Show warnings/success from submit callback
+if "submit_warning" in st.session_state:
+    st.warning(st.session_state["submit_warning"])
+    del st.session_state["submit_warning"]
+
+if "submit_success" in st.session_state:
+    st.success(st.session_state["submit_success"])
+    del st.session_state["submit_success"]
+if 0:    
+    st.markdown("Enter your request details below. You can paste multiple lines.")
+    with st.expander("Text Request", expanded=False):
+        # Big text box
+        request_text = st.text_area(
+            label="Request Description",
+            value=ss.data_request_text,
+            help=(
+                "Describe your data request here.\n"
+                "Example:\n"
+                "plt={'FEATURE_CHECKING':'', 'JSL_SCRIPT':'ExecutePythonScript', "
+                "'PY_SCRIPT':'getSN_SBR_input.py', 'SBR_REQ':{'PRODUCT':'DORADO', 'SBR':'TKDRH434H'}, "
+                "'ATTR_FILTER': {'MEDIA_FORMAT':'HSMR', 'NUM_HEADS':'20'}, "
+                "'SAVE_NAME':'DRD_20HD_HSMR_TKDRH434H', 'MAX_QTY':500 }"
+            ),
+            height=300,
+            key="data_request_text_area",
+        )
+
+        # Character count / simple validation
+        st.caption(f"Characters: {len(request_text)}")
+
+            
+        def submit_request():
+            text = request_text.strip()
+            if not text:
+                st.warning("Please enter a description before submitting.")
+            else:
+
+                if 1:
+                    req_id = str(uuid.uuid4())
+                    ss.last_request_id = req_id
+                    ss.data_request_text = text
+
+                    # Persist each line as a separate entry in the log file
+                    try:
+                        log_path = config.QUERY_REQUEST_LOG_FILE
+                        lines = [line for line in text.splitlines() if line.strip()]
+                        
+                        # Append or create
+                        try:
+                            with open(log_path, "a+", encoding="utf-8") as f:
+                                for line in lines:
+                                    f.write(f"{line}\n")
+                        except Exception:
+                            pass
+                        
+                    except Exception as e:
+                        st.error(f"Failed to record request: {e}")
+
+                    clear_text()
 
 
-st.divider()
+        st.divider()
 
 
- 
-colA, colB = st.columns([1, 7])
-with colA:
-	submit = st.button("Submit Request", type="primary", on_click=submit_request)
-with colB:
-	st.button("Clear", on_click=clear_text)
+        
+        colA, colB = st.columns([1, 7])
+        with colA:
+            submit = st.button("Submit Request", type="secondary", on_click=submit_request)
+        with colB:
+            st.button("Clear", on_click=clear_text)
 
-st.success(f"Request submitted. ID: {ss.last_request_id}")       
+        st.success(f"Request submitted. ID: {ss.last_request_id}")       
+
+
+
+with st.expander("Gui Request", expanded=True):
+    
+    # Product input as combobox
+    product = st.selectbox(
+        "Product",
+        options=["DORADO", "MARLIN", "MARLIN BP", "SUMMIT"],  # Add more as needed
+        key="gui_product"
+    )
+
+    
+    # SBR input as text box
+    sbr = st.text_input(
+        "SBR#",
+        value="",
+        key="gui_sbr"
+    )
+
+    # HD_Count as combo box
+    hd_count = st.selectbox(
+        "HD Count",
+        options=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,11,12, 20],  # Example values
+        key="gui_hd_count",
+        help=("Select 0 for all heads on SBR#."),
+    )
+
+    # Config as checkbox group
+    configs = st.multiselect(
+        "Config",
+        options=["CMR", "SMR", "HSMR"],
+        key="gui_config"
+    )
+
+     # SBR input as text box
+    sbr_info = st.text_input(
+        "SBR# DESCRIPTION",
+        value="",
+        key="gui_sbr_info"
+    )
+    
+    template_string = "plt={'FEATURE_CHECKING':'', 'JSL_SCRIPT':'ExecutePythonScript', 'PY_SCRIPT':'getSN_SBR_input.py', 'SBR_REQ':{'PRODUCT':'DORADO', 'SBR':'TKDRH434H'}, 'ATTR_FILTER': {'MEDIA_FORMAT':'HSMR', 'NUM_HEADS':'20'}, 'SAVE_NAME':'DRD_20HD_HSMR_TKDRH434H', 'MAX_QTY':500, 'DESCRIPTION' : 'DORADO PCO 3.7' }"
+    # Button to submit GUI request
+    def submit_gui_request():
+        # Build request string from GUI selections
+        attr_filter = {}
+        if not configs:
+            st.warning("Please select at least one Config before submitting.")
+            return
+
+        # Find short name from value in product config.PROGRAM_NAME_MAP
+        short_name = product
+        for k, v in config.PROGRAM_SHORT_NAME_MAP.items():
+            if v == product:
+                short_name = k
+                break
+        # Loop through selected configs and create a request for each
+        for cfg in configs:
+            attr_filter_single = attr_filter.copy()
+            attr_filter_single["MEDIA_FORMAT"] = cfg
+            if hd_count:
+                attr_filter_single["NUM_HEADS"] = str(hd_count)
+            elif "NUM_HEADS" in attr_filter_single:
+                del attr_filter_single["NUM_HEADS"]
+            sbr_req = {
+            "PRODUCT": product,
+            "SBR": sbr.strip().upper(),
+            }
+            request_dict = {
+                "FEATURE_CHECKING": "",
+                "JSL_SCRIPT": "ExecutePythonScript",
+                "PY_SCRIPT": "getSN_SBR_input.py",
+                "SBR_REQ": sbr_req,
+                "ATTR_FILTER": attr_filter_single,
+                "SAVE_NAME": f"{short_name}_{hd_count:02d}H_{cfg[0]}_{sbr}",
+                "MAX_QTY": 500,
+                "DESCRIPTION": sbr_info.strip(),
+            }
+            request_str = f"plt={request_dict}"
+            # Save to log file
+            try:
+                log_path = config.QUERY_REQUEST_LOG_FILE
+                # Read all existing lines to avoid duplicates
+                with open(log_path, "a+", encoding="utf-8") as f:
+                    f.seek(0)
+                    existing_lines = set(line.strip() for line in f.readlines())
+                    if request_str.strip() not in existing_lines:
+                        f.write(f"{request_str}\n")
+            except Exception as e:
+                st.error(f"Failed to record GUI request: {e}")
+        st.success("All GUI requests submitted.")
+
+    def clear_gui_fields():
+        ss.gui_product = "DORADO"
+        ss.gui_sbr = ""
+        ss.gui_hd_count = 0
+        ss.gui_config = []
+        ss.gui_sbr_info = ""
+
+    def submit_gui_request_and_clear():
+        submit_gui_request()
+        clear_gui_fields()
+
+    st.button("Submit GUI Request", on_click=submit_gui_request_and_clear)
+
 st.caption(f"Total requests in queue: {lineCount()}")

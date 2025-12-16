@@ -2,6 +2,7 @@
 # http://localhost:8501/ttr_Test_Time_View?prog_0=MARLIN&cfg_0=SMR&pco_0=PCO2&prog_1=DORADO&cfg_1=HSMR&pco_1=PCO3
 # http://localhost:8501/ttr_Test_Time_Compare_View?prog_0=SUMMIT&cfg_0=CMR&pco_0=PYTHON_373&prog_1=SUMMIT&cfg_1=CMR&pco_1=PYTHON_374
 
+import textwrap
 import streamlit as st
 import pandas as pd
 import os
@@ -917,7 +918,8 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
 
 
     # Set fixed width for columns 1-5 (after OPERATION)
-    col_widths = {col: {"width": 120} for col in df_view.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
+    col_widths = {col: {"width": 120, 'help': col} for col in df_view.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
+
     st.dataframe(df_view, use_container_width=True, column_config=col_widths, height=15*32)
 
     # Download filtered data
@@ -1122,10 +1124,10 @@ with st.expander("Test Time Distribution", expanded=False):
 
             violin_points_df = pd.DataFrame(violin_points_data)
             # Set fixed width for columns in violin_points_df display
-            col_widths = {col: {"width": 120} for col in violin_points_df.columns}
+            col_widths = {col: {"width": 120, 'help': col} for col in violin_points_df.columns}
             if len(violin_points_df.columns) > 0:
                 last_col = violin_points_df.columns[-1]
-                col_widths[last_col] = {"width": 240}
+                col_widths[last_col] = {"width": 240, 'help': last_col}
             # Add index column starting from 1
             violin_points_df.index = violin_points_df.index + 1
             violin_points_df.reset_index(inplace=True)
@@ -1267,7 +1269,7 @@ with st.expander("Test Time By State", expanded=False):
                         
                 styled = state_summary.style.apply(highlight_last_row, axis=1)
 
-                col_widths = {col: {"width": 120} for col in state_summary.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
+                col_widths = {col: {"width": 120, 'help': col} for col in state_summary.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
 
                 st.dataframe(styled, use_container_width=True, column_config=col_widths, height=15*32)
             else:
@@ -1608,7 +1610,7 @@ with st.expander("Test Time By Test", expanded=False):
             # Extract the list of column fields from columnDefs
             for col, width in col_widths.items():
                 if col in tt_summary.columns:
-                    gb.configure_column(col, width=width)
+                    gb.configure_column(col, width=width,autoHeaderHeight=True,headerTooltip = col  )
 
             grid_options = gb.build()
 
