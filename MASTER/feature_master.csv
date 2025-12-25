@@ -14250,7 +14250,7 @@ DISC,MARLIN BP,CR0014446,Developing,Irin Siribannasit,2025-12-04 11:13:36,Marlin
 DISC,SUMMIT,CR0014447,Awaiting Acceptation,Amared Saichomphoo,2025-12-04 12:23:13,Summit SCOPY increase target clearance,Yield Improvement,,,,
 DISC,MARLIN BP,CR0014448,Awaiting Acceptation,Pavarisa Boonyaritchaikit,2025-12-04 13:01:39,T193 CHROME step size,TTR,,,,
 DISC,SUMMIT,CR0014449,Completed,Gronggaew Boonjuang,2025-12-04 15:06:41,Summit: PCO Release (DA020) - PCO3.7.3GE3A,Others,,,,
-DISC,MARLIN,CR0014450,Developing,Ampol Meetee,2025-12-04 15:18:00,Marlin TTR: VBAR_LASER prediction at LZR oeration,TTR,,,,VBAR ATI prediction ML
+DISC,MARLIN,CR0014450,Developing,Ampol Meetee,2025-12-04 15:18:00,Marlin TTR: VBAR_LASER prediction at LZR oeration,TTR,,,, 
 DISC,SUMMIT,CR0014451,Developing,Worawit Kanjanapruthipong,2025-12-04 15:26:49,Transfer Function TTR,TTR,,,,
 DISC,SUMMIT,CR0014452,Awaiting Acceptation,Chatchawan Taiwan,2025-12-04 18:00:32,Summit ec10446 PBA_TO_LBA_SCALER adjust,Yield Improvement,,,,
 DISC,MARLIN BP,CR0014453,Awaiting Implementation,Naruporn Srikullabut,2025-12-04 23:38:33,Fix NDAT2 failure,Others,,,,
