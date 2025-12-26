@@ -945,6 +945,97 @@ if "TEST_TIME_org" not in source_df.columns:
     source_df['TEST_TIME_org'] = pd.to_numeric(source_df['TEST_TIME'], errors='coerce').fillna(0)
     source_df['TEST_TIME'] = source_df['TEST_TIME_org'] / 3600   
 
+with st.expander("Data Filter", expanded=False):
+    pass
+    # Add 3 sets of attribute/value filters (row-based, no program/config selection)
+
+    st.write("**Attribute Filters:**")
+
+    # Attribute Filters with improved layout
+    cols = st.columns(3)
+    filter_columns = config.TTR_ATTR_WEB_FILTER_LIST
+
+    def get_unique_values(df, col):
+        if col in df.columns:
+            vals = df[col].dropna().unique()
+            vals = sorted([str(v) for v in vals])
+            return [""] + vals
+        return [""]
+    with cols[0]:
+        st.markdown("**Filter Set 1**")
+        attr_1 = st.selectbox("Attribute", filter_columns, key="attr_1")
+        val_options_1 = get_unique_values(source_df, attr_1)
+        val_1 = st.multiselect("Value", val_options_1, key="val_1")
+
+    with cols[1]:
+        st.markdown("**Filter Set 2**")
+        attr_2 = st.selectbox("Attribute", filter_columns, key="attr_2")
+        val_options_2 = get_unique_values(source_df, attr_2)
+        val_2 = st.multiselect("Value", val_options_2, key="val_2")
+
+    with cols[2]:
+        st.markdown("**Filter Set 3**")
+        attr_3 = st.selectbox("Attribute", filter_columns, key="attr_3")
+        val_options_3 = get_unique_values(source_df, attr_3)
+        val_3 = st.multiselect("Value", val_options_3, key="val_3")
+
+    # Editable table for SERIAL_NUM, TRANS_SEQ
+    st.markdown("")
+
+
+    with st.expander("**Filter out SERIAL_NUM and TRANS_SEQ**", expanded=False):
+        editable_cols = ["SERIAL_NUM", "TRANS_SEQ"]
+        # Prepare initial data for editable table (show up to 10 rows)
+        #editable_df = filtered_df[editable_cols].drop_duplicates().head(10) 
+        #if not filtered_df.empty else pd.DataFrame(columns=editable_cols)
+        editable_df = pd.DataFrame(columns=editable_cols)
+        # Remove blank rows before showing in editor
+        editable_df = editable_df.dropna(how='all')
+
+        edited_df = st.data_editor(
+            editable_df,
+            num_rows="dynamic",
+            use_container_width=False,
+            key="serial_num_trans_seq_editor"
+        )
+        # Optionally, you can process edited_df further or save it
+
+
+
+    query_btn_pressed = st.button(
+        "Filter Data",
+        key="filter_data_btn",
+        help="Apply Filter"
+    )
+
+    # Filter source_df based on user selected filters
+    filtered_df = source_df.copy()
+    # Only filter if attribute is not empty and value(s) are selected
+    if query_btn_pressed:
+        # Do NOT reset user selections after filtering
+        # (removed code that reset attr/val selections)
+        if attr_1 and val_1 and "" not in val_1:
+            filtered_df = filtered_df[filtered_df[attr_1].astype(str).isin(val_1)]
+        if attr_2 and val_2 and "" not in val_2:
+            filtered_df = filtered_df[filtered_df[attr_2].astype(str).isin(val_2)]
+        if attr_3 and val_3 and "" not in val_3:
+            filtered_df = filtered_df[filtered_df[attr_3].astype(str).isin(val_3)]
+
+        if edited_df is not None and not edited_df.empty and len(edited_df) > 0:
+            # Remove rows matching
+            for _, row in edited_df.iterrows():
+                sn = str(row.get("SERIAL_NUM", "")).strip()
+                ts = str(row.get("TRANS_SEQ", "")).strip()
+                if sn and ts:
+                    filtered_df = filtered_df[~((filtered_df['SERIAL_NUM'].astype(str) == sn) & (filtered_df['TRANS_SEQ'].astype(str) == ts))]
+                    # Clear data in serial_num_trans_seq_editor
+                    #st.session_state["serial_num_trans_seq_editor"] = pd.DataFrame(columns=["SERIAL_NUM", "TRANS_SEQ"])
+                    
+
+                
+        st.session_state.tt_filtered = filtered_df
+        st.rerun()
+
 with st.expander("CMS Config", expanded=False):
 
     if not source_df.empty and "OPERATION" in source_df.columns and "pco" in source_df.columns and "TEST_TIME" in source_df.columns:
@@ -1010,7 +1101,9 @@ with st.expander("Test Time Distribution", expanded=False):
         pass
      # Use filtered data if available
     elif "tt_filtered" in st.session_state and not st.session_state.tt_filtered.empty:
-        df_dist = df_raw.copy()
+
+        #df_dist = df_raw.copy()
+        df_dist = st.session_state.tt_filtered.copy()
         # Ensure numeric TEST_TIME (already converted to hours earlier, but reconvert safely)
 
         df_dist['TEST_TIME'] = pd.to_numeric(df_dist['TEST_TIME'], errors='coerce')
