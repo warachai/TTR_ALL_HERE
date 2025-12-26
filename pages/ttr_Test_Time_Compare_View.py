@@ -903,7 +903,7 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
 
     
     # Order df_view OPERATION column to match the custom order
-    custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+    custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2", "Total"]
     if "OPERATION" in df_view.columns:
         df_view["OPERATION"] = pd.Categorical(df_view["OPERATION"], categories=custom_order, ordered=True)
         df_view = df_view.sort_values("OPERATION")
@@ -920,7 +920,7 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
     # Set fixed width for columns 1-5 (after OPERATION)
     col_widths = {col: {"width": 120, 'help': col} for col in df_view.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
 
-    st.dataframe(df_view, use_container_width=True, column_config=col_widths, height=15*32)
+    st.dataframe(df_view, use_container_width=False, column_config=col_widths, height=15*32)
 
     # Download filtered data
     csv = df_f.to_csv(index=False).encode('utf-8')
@@ -931,6 +931,28 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
         mime="text/csv",
         key=f"{key_prefix}_download_btn"
     )
+
+def _get_attr_default(idx):
+    """Get attribute default from query params."""
+    attr_val = filter_params.get(f"attr_{idx}", "")
+    if isinstance(attr_val, list):
+        attr_val = attr_val[0] if attr_val else ""
+    # Validate it's in filter_columns
+    if attr_val in filter_columns:
+        return filter_columns.index(attr_val)
+    return 0
+
+def _get_val_default(idx):
+    """Get value default list from query params."""
+    val_raw = filter_params.get_all(f"val_{idx}")
+
+    if isinstance(val_raw, str):
+        # Single value stored as string
+        return [val_raw] if val_raw else []
+    elif isinstance(val_raw, list):
+        return val_raw
+    return []
+
 # -------------------------------------------------------------------
 # Middle: Test Time
 # title, df, key_prefix, groupby_cols=None
@@ -961,23 +983,28 @@ with st.expander("Data Filter", expanded=False):
             vals = sorted([str(v) for v in vals])
             return [""] + vals
         return [""]
+    
+    # Read filter parameters from query_params if available
+    filter_params = st.query_params
+
+
     with cols[0]:
         st.markdown("**Filter Set 1**")
-        attr_1 = st.selectbox("Attribute", filter_columns, key="attr_1")
+        attr_1 = st.selectbox("Attribute", filter_columns, index=_get_attr_default(1), key="attr_1")
         val_options_1 = get_unique_values(source_df, attr_1)
-        val_1 = st.multiselect("Value", val_options_1, key="val_1")
+        val_1 = st.multiselect("Value", val_options_1, default=_get_val_default(1), key="val_1")
 
     with cols[1]:
         st.markdown("**Filter Set 2**")
-        attr_2 = st.selectbox("Attribute", filter_columns, key="attr_2")
+        attr_2 = st.selectbox("Attribute", filter_columns, index=_get_attr_default(2), key="attr_2")
         val_options_2 = get_unique_values(source_df, attr_2)
-        val_2 = st.multiselect("Value", val_options_2, key="val_2")
+        val_2 = st.multiselect("Value", val_options_2, default=_get_val_default(2), key="val_2")
 
     with cols[2]:
         st.markdown("**Filter Set 3**")
-        attr_3 = st.selectbox("Attribute", filter_columns, key="attr_3")
+        attr_3 = st.selectbox("Attribute", filter_columns, index=_get_attr_default(3), key="attr_3")
         val_options_3 = get_unique_values(source_df, attr_3)
-        val_3 = st.multiselect("Value", val_options_3, key="val_3")
+        val_3 = st.multiselect("Value", val_options_3, default=_get_val_default(3), key="val_3")
 
     # Editable table for SERIAL_NUM, TRANS_SEQ
     st.markdown("")
@@ -1031,6 +1058,18 @@ with st.expander("Data Filter", expanded=False):
                     # Clear data in serial_num_trans_seq_editor
                     #st.session_state["serial_num_trans_seq_editor"] = pd.DataFrame(columns=["SERIAL_NUM", "TRANS_SEQ"])
                     
+        # Update query_params with filter settings
+        # Keep existing prog/cfg/pco params and add/update filter params
+        if val_1 and "" not in val_1:
+            st.query_params["attr_1"] = attr_1
+            st.query_params["val_1"] = val_1
+        if val_2 and "" not in val_2:
+            st.query_params["attr_2"] = attr_2
+            st.query_params["val_2"] = val_2
+        if val_3 and "" not in val_3:
+            st.query_params["attr_3"] = attr_3
+            st.query_params["val_3"] = val_3
+
 
                 
         st.session_state.tt_filtered = filtered_df
@@ -1192,7 +1231,9 @@ with st.expander("Test Time Distribution", expanded=False):
             if "OPERATION" in df_dist.columns and isinstance(df_dist['OPERATION'], pd.Categorical):
                 fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OPERATION'].cat.categories))
 
+        # Set default selection mode to "select" (user select mode)
         fig.update_layout(
+            dragmode="select",  # Default to user selection mode
             yaxis_title="Test Time (hours)",
             xaxis_title="Operation",
             yaxis_type=y_scale,
@@ -1253,6 +1294,13 @@ with st.expander("Test Time By State", expanded=False):
         st.info("No query parameters provided. Please select filters above.")
     else:
         df_state = load_merged_test_time_by_state_detail().copy()
+
+        if attr_1 and val_1 and "" not in val_1 and attr_1 in df_state.columns:
+            df_state = df_state[df_state[attr_1].astype(str).isin(val_1)]
+        if attr_2 and val_2 and "" not in val_2 and attr_2 in df_state.columns:
+            df_state = df_state[df_state[attr_2].astype(str).isin(val_2)]
+        if attr_3 and val_3 and "" not in val_3 and attr_3 in df_state.columns:
+            df_state = df_state[df_state[attr_3].astype(str).isin(val_3)]
 
         c1_tt, c2_tt = st.columns(2)
         with c1_tt:
