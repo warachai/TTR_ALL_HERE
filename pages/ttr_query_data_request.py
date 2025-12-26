@@ -91,6 +91,7 @@ if 0:
 
             
         def submit_request():
+            
             text = request_text.strip()
             if not text:
                 st.warning("Please enter a description before submitting.")
@@ -176,6 +177,10 @@ with st.expander("Gui Request", expanded=True):
     template_string = "plt={'FEATURE_CHECKING':'', 'JSL_SCRIPT':'ExecutePythonScript', 'PY_SCRIPT':'getSN_SBR_input.py', 'SBR_REQ':{'PRODUCT':'DORADO', 'SBR':'TKDRH434H'}, 'ATTR_FILTER': {'MEDIA_FORMAT':'HSMR', 'NUM_HEADS':'20'}, 'SAVE_NAME':'DRD_20HD_HSMR_TKDRH434H', 'MAX_QTY':500, 'DESCRIPTION' : 'DORADO PCO 3.7' }"
     # Button to submit GUI request
     def submit_gui_request():
+
+        query_hist  = config.QUERY_REQUEST_LOG_FILE_HISTORY
+        query_hist_header = config.QUERY_REQUEST_LOG_FILE_HISTORY_HEADER
+     
         # Build request string from GUI selections
         attr_filter = {}
         if not configs:
@@ -220,6 +225,28 @@ with st.expander("Gui Request", expanded=True):
                     existing_lines = set(line.strip() for line in f.readlines())
                     if request_str.strip() not in existing_lines:
                         f.write(f"{request_str}\n")
+
+                with open(query_hist, "a+", encoding="utf-8") as f_hist:
+                    # If file is new, write header
+                    f_hist.seek(0)
+                    if f_hist.readline() == "":
+                        f_hist.write(",".join(query_hist_header) + "\n")
+                    from datetime import datetime
+                    user = st.session_state.get("user_name", "anonymous")
+                    dt_str = datetime.utcnow().isoformat(timespec="seconds")
+                    row = [
+                        user,
+                        dt_str,
+                        product,
+                        cfg,
+                        str(hd_count),
+                        sbr.strip().upper(),
+                        f"{short_name}_{hd_count:02d}H_{cfg[0]}_{sbr}",
+                        f'"{sbr_info.strip()}"',
+                        f'"{request_str}"'
+                    ]
+                    f_hist.write(",".join(row) + "\n")
+
             except Exception as e:
                 st.error(f"Failed to record GUI request: {e}")
         st.success("All GUI requests submitted.")

@@ -949,7 +949,7 @@ with st.expander("CMS Config", expanded=False):
 
     if not source_df.empty and "OPERATION" in source_df.columns and "pco" in source_df.columns and "TEST_TIME" in source_df.columns:
         custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
-
+        
         pivot_df = source_df.pivot_table(
             index=["OPERATION"],
             columns=["pco",'CMS_CONFIG'] ,
@@ -987,6 +987,16 @@ with st.expander("CMS Config", expanded=False):
 
         st.dataframe(pivot_df, use_container_width=True)
 
+        pivot_df_cms = source_df.pivot_table(
+            index=["program","CMS_CONFIG"],
+            columns=["pco"] ,
+            values="TEST_TIME",
+            aggfunc="count",
+            fill_value=0
+        ).reset_index()
+
+        st.dataframe(pivot_df_cms, use_container_width=False)
+
 with st.expander("Test Time By Operation", expanded=False):
     test_time_block("Test Time", source_df, "tt_overall", groupby_cols=["program", "config", "pco", "Category"])
 
@@ -997,10 +1007,9 @@ with st.expander("Test Time By Operation", expanded=False):
 
 with st.expander("Test Time Distribution", expanded=False):
     if not has_query_params:
-        st.stop()
-
+        pass
      # Use filtered data if available
-    if "tt_filtered" in st.session_state and not st.session_state.tt_filtered.empty:
+    elif "tt_filtered" in st.session_state and not st.session_state.tt_filtered.empty:
         df_dist = df_raw.copy()
         # Ensure numeric TEST_TIME (already converted to hours earlier, but reconvert safely)
 
@@ -1553,9 +1562,11 @@ with st.expander("Test Time By Test", expanded=False):
                 gb.configure_column("OPERATION", rowGroup=True, hide=True)
                 gb.configure_column("TEST_NUMBER", rowGroup=True, hide=True)
 
-            if len(test_time_cols) == 2:
-                gb.configure_column('TT_Diff', aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
-
+            try:
+                if len(test_time_cols) == 2:
+                    gb.configure_column('TT_Diff', aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
+            except:
+                pass
             # Aggregation for numeric columns when grouped
             for col in group_name_list:
                 gb.configure_column('TT_' + col, aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
@@ -1650,3 +1661,61 @@ with st.expander("Test Time By Test", expanded=False):
         else:
             st.info("No filtered data available. Query data above to view state-wise test time.")
 
+def TestTime_Hist_block(title, df, groupby_cols=None):
+    
+    with st.expander(f"{title}", expanded=False):
+
+        c0, c1, c2 = st.columns(3)
+        default_programs = ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT", "TSR"]
+        params = st.query_params
+
+        raw_program_params = params.get("program", params.get("product", []))
+        with c0:
+            program_filter = st.multiselect(
+                "Select Product(s)",
+                ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT"],
+                default=default_programs if raw_program_params else []
+            )
+        with c1:
+            filter_text_tt_hist = st.text_input(
+            "Filter Text Box",
+            "",
+            placeholder="Search in all columns...",
+            key="filter_text_tt_hist"
+            )
+
+        with c2:
+            logic_tt_hist = st.radio(
+            "Search Mode",
+            ["OR", "AND"],
+            horizontal=True,
+            key="logic_tt_hist",
+            help="OR: Match any word | AND: Match all words, [col]_null to search for null values"
+        )
+        df_org = df.copy()
+        if program_filter:  # If any programs are selected
+            df = df[df['Product'].isin(program_filter)]
+        else:  # If nothing selected, show all programs
+            df = df_org
+        df_f = apply_filter(
+            df,
+            filter_text_tt_hist,
+            logic_tt_hist,
+            config.QUERY_REQUEST_LOG_FILE_HISTORY_HEADER,
+        )
+
+
+        st.dataframe(df_f, use_container_width=True, height=15*32)
+def load_test_time_hist_info():
+    
+    hist_fil = config.QUERY_REQUEST_LOG_FILE_HISTORY
+    if os.path.exists(hist_fil):
+        try:
+            df_hist = pd.read_csv(hist_fil)
+            return df_hist
+        except Exception:
+            pass
+    else:
+        return pd.DataFrame()
+source_df = load_test_time_hist_info()
+TestTime_Hist_block("Test Time Hist", source_df)
