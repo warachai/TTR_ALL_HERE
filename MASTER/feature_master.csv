@@ -15085,3 +15085,5 @@ DISC,LOMBARD KV,CR0014405,Awaiting Approval,Petcharat Boonprasop,2025-11-25 17:1
 DISC,IOMQM,CR0014423,Completed,Sarunya Nathonghor,2025-11-28 10:33:45,Dorado: MQM Request PCO to force fail EC10345,Others,,,,
 DISC,IOMQM,CR0014426,Awaiting Acceptation,rungnapa taithai,2025-11-28 18:26:40,Request force fail by attribute for MQM2,Others,,,,
 DISC,OSPREY SATA,CR0014429,Awaiting Approval,Chonticha Vathayotha,2025-12-01 12:50:39,OSPREY: Force fail EC55655 at SCOPY,Others,,,,
+jira_issues,TSR,TSR-7131,New Request,,2025-12-29T13:21:16.000+0800,Summit TDK EE C3t- Write Power Opti,Others,,,,
+jira_issues,TSR,TSR-7130,New Request,,2025-12-29T09:10:47.000+0800,PSV_SCOPY_QUALITY  EC11069 DEPOP_OTF fail,Others,,,,
