@@ -201,17 +201,24 @@ with st.expander("Gui Request", expanded=True):
                 attr_filter_single["NUM_HEADS"] = str(hd_count)
             elif "NUM_HEADS" in attr_filter_single:
                 del attr_filter_single["NUM_HEADS"]
+            # If SBR contains a comma, wrap it in double quotes
+            sbr_value = sbr.strip().upper()
+
             sbr_req = {
-            "PRODUCT": product,
-            "SBR": sbr.strip().upper(),
+                "PRODUCT": product,
+                "SBR": sbr_value,
             }
+
+            sbr_save_name = sbr.replace(',', '_').strip().upper()
+            sbr_save_name = sbr_save_name.replace(' ', '').strip().upper()
+            st.write(f"sbr_save_name: {sbr_save_name}")
             request_dict = {
                 "FEATURE_CHECKING": "",
                 "JSL_SCRIPT": "ExecutePythonScript",
                 "PY_SCRIPT": "getSN_SBR_input.py",
                 "SBR_REQ": sbr_req,
                 "ATTR_FILTER": attr_filter_single,
-                "SAVE_NAME": f"{short_name}_{hd_count:02d}H_{cfg[0]}_{sbr}",
+                "SAVE_NAME": f"{short_name}_{hd_count:02d}H_{cfg[0]}_{sbr_save_name}",
                 "MAX_QTY": 500,
                 "DESCRIPTION": sbr_info.strip(),
             }
@@ -240,8 +247,8 @@ with st.expander("Gui Request", expanded=True):
                         product,
                         cfg,
                         str(hd_count),
-                        sbr.strip().upper(),
-                        f"{short_name}_{hd_count:02d}H_{cfg[0]}_{sbr}",
+                        f'"{sbr.strip().upper()}"',
+                        f"{short_name}_{hd_count:02d}H_{cfg[0]}_{sbr_save_name}",
                         f'"{sbr_info.strip()}"',
                         f'"{request_str}"'
                     ]
@@ -249,7 +256,7 @@ with st.expander("Gui Request", expanded=True):
 
             except Exception as e:
                 st.error(f"Failed to record GUI request: {e}")
-        st.success("All GUI requests submitted.")
+        st.success("All GUI requests submitted. MMM")
 
     def clear_gui_fields():
         ss.gui_product = "DORADO"
