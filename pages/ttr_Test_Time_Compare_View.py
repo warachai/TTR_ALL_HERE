@@ -1012,11 +1012,66 @@ with st.expander("Data Filter", expanded=False):
 
     with st.expander("**Filter out SERIAL_NUM and TRANS_SEQ**", expanded=False):
         editable_cols = ["SERIAL_NUM", "TRANS_SEQ"]
-        # Prepare initial data for editable table (show up to 10 rows)
-        #editable_df = filtered_df[editable_cols].drop_duplicates().head(10) 
-        #if not filtered_df.empty else pd.DataFrame(columns=editable_cols)
-        editable_df = pd.DataFrame(columns=editable_cols)
-        # Remove blank rows before showing in editor
+
+        # Persistent store for pasted rows so they survive reruns
+        if "_sn_ts_rows" not in st.session_state:
+            st.session_state._sn_ts_rows = []  # list of {SERIAL_NUM, TRANS_SEQ}
+
+        st.markdown("Paste rows from Excel (two columns: SERIAL_NUM, TRANS_SEQ). Accepts tab, comma, or whitespace separated values.")
+        paste_text = st.text_area(
+            "Paste here",
+            placeholder="SERIAL_NUM\tTRANS_SEQ\n12345\t678\n12346\t679",
+            height=120,
+            key="sn_ts_paste_area",
+        )
+        cpa, cpb = st.columns([1,1])
+        with cpa:
+            add_paste = st.button("Add Pasted Rows", key="add_pasted_sn_ts")
+        with cpb:
+            clear_paste = st.button("Clear Rows", key="clear_sn_ts_rows")
+
+        def _parse_paste(text: str):
+            rows = []
+            for line in text.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                # Try tab, then comma, then whitespace
+                if "\t" in line:
+                    parts = line.split("\t")
+                elif "," in line:
+                    parts = line.split(",")
+                else:
+                    parts = line.split()
+                if len(parts) >= 2:
+                    sn = str(parts[0]).strip()
+                    ts = str(parts[1]).strip()
+                    if sn or ts:
+                        rows.append({"SERIAL_NUM": sn, "TRANS_SEQ": ts})
+            return rows
+
+        if add_paste and paste_text:
+            new_rows = _parse_paste(paste_text)
+            if new_rows:
+                # Merge with existing, de-duplicate
+                existing = {(r.get("SERIAL_NUM",""), r.get("TRANS_SEQ","")) for r in st.session_state._sn_ts_rows}
+                for r in new_rows:
+                    key = (r.get("SERIAL_NUM",""), r.get("TRANS_SEQ",""))
+                    if key not in existing:
+                        st.session_state._sn_ts_rows.append(r)
+                        existing.add(key)
+                st.toast(f"Added {len(new_rows)} pasted rows", icon="✅")
+
+        if clear_paste:
+            st.session_state._sn_ts_rows = []
+            st.toast("Cleared rows", icon="🗑️")
+
+        # Build initial DataFrame for the editor from session rows
+        if st.session_state._sn_ts_rows:
+            editable_df = pd.DataFrame(st.session_state._sn_ts_rows, columns=editable_cols)
+        else:
+            editable_df = pd.DataFrame(columns=editable_cols)
+
         editable_df = editable_df.dropna(how='all')
 
         edited_df = st.data_editor(
@@ -1025,7 +1080,16 @@ with st.expander("Data Filter", expanded=False):
             use_container_width=False,
             key="serial_num_trans_seq_editor"
         )
-        # Optionally, you can process edited_df further or save it
+
+        # Persist any changes from the editor back to session
+        if isinstance(edited_df, pd.DataFrame):
+            try:
+                # Normalize NaNs to empty strings for consistency
+                tmp = edited_df.copy()[editable_cols].astype(str)
+                tmp = tmp.replace({"nan": ""})
+                st.session_state._sn_ts_rows = tmp.to_dict(orient="records")
+            except Exception:
+                pass
 
 
 
@@ -1294,13 +1358,24 @@ with st.expander("Test Time By State", expanded=False):
         st.info("No query parameters provided. Please select filters above.")
     else:
         df_state = load_merged_test_time_by_state_detail().copy()
+        # st.write(f"Filtering {attr_1} in {val_1}, remaining rows: {len(df_state)}")
+        # st.write(df_state.columns)
 
         if attr_1 and val_1 and "" not in val_1 and attr_1 in df_state.columns:
             df_state = df_state[df_state[attr_1].astype(str).isin(val_1)]
+            st.write(f"Filtering {attr_1} in {val_1}, remaining rows: {len(df_state)}")
         if attr_2 and val_2 and "" not in val_2 and attr_2 in df_state.columns:
             df_state = df_state[df_state[attr_2].astype(str).isin(val_2)]
         if attr_3 and val_3 and "" not in val_3 and attr_3 in df_state.columns:
             df_state = df_state[df_state[attr_3].astype(str).isin(val_3)]
+
+        if edited_df is not None and not edited_df.empty and len(edited_df) > 0:
+            # Remove rows matching
+            for _, row in edited_df.iterrows():
+                sn = str(row.get("SERIAL_NUM", "")).strip()
+                ts = str(row.get("TRANS_SEQ", "")).strip()
+                if sn and ts:
+                    df_state = df_state[~((df_state['SERIAL_NUM'].astype(str) == sn) & (df_state['TRANS_SEQ'].astype(str) == ts))]
 
         c1_tt, c2_tt = st.columns(2)
         with c1_tt:
@@ -1533,6 +1608,7 @@ with st.expander("Test Time By State", expanded=False):
                     fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OP_STATE'].cat.categories))
 
             fig.update_layout(
+                 dragmode="select",  # Default to user selection mode
                 yaxis_title="Test Time (hours)",
                 xaxis_title="Operation",
                 yaxis_type=y_scale,

@@ -3,7 +3,7 @@
 import streamlit as st
 import pandas as pd
 import config
-
+import os
 from streamlit import session_state as ss
 import uuid
 
@@ -80,7 +80,7 @@ if 0:
                 "plt={'FEATURE_CHECKING':'', 'JSL_SCRIPT':'ExecutePythonScript', "
                 "'PY_SCRIPT':'getSN_SBR_input.py', 'SBR_REQ':{'PRODUCT':'DORADO', 'SBR':'TKDRH434H'}, "
                 "'ATTR_FILTER': {'MEDIA_FORMAT':'HSMR', 'NUM_HEADS':'20'}, "
-                "'SAVE_NAME':'DRD_20HD_HSMR_TKDRH434H', 'MAX_QTY':500 }"
+                "'SAVE_NAME':'DRD_20HD_HSMR_TKDRH434H', 'MAX_QTY':15000 }"
             ),
             height=300,
             key="data_request_text_area",
@@ -174,7 +174,7 @@ with st.expander("Gui Request", expanded=True):
         key="gui_sbr_info"
     )
     
-    template_string = "plt={'FEATURE_CHECKING':'', 'JSL_SCRIPT':'ExecutePythonScript', 'PY_SCRIPT':'getSN_SBR_input.py', 'SBR_REQ':{'PRODUCT':'DORADO', 'SBR':'TKDRH434H'}, 'ATTR_FILTER': {'MEDIA_FORMAT':'HSMR', 'NUM_HEADS':'20'}, 'SAVE_NAME':'DRD_20HD_HSMR_TKDRH434H', 'MAX_QTY':500, 'DESCRIPTION' : 'DORADO PCO 3.7' }"
+    template_string = "plt={'FEATURE_CHECKING':'', 'JSL_SCRIPT':'ExecutePythonScript', 'PY_SCRIPT':'getSN_SBR_input.py', 'SBR_REQ':{'PRODUCT':'DORADO', 'SBR':'TKDRH434H'}, 'ATTR_FILTER': {'MEDIA_FORMAT':'HSMR', 'NUM_HEADS':'20'}, 'SAVE_NAME':'DRD_20HD_HSMR_TKDRH434H', 'MAX_QTY':15000, 'DESCRIPTION' : 'DORADO PCO 3.7' }"
     # Button to submit GUI request
     def submit_gui_request():
 
@@ -219,7 +219,7 @@ with st.expander("Gui Request", expanded=True):
                 "SBR_REQ": sbr_req,
                 "ATTR_FILTER": attr_filter_single,
                 "SAVE_NAME": f"{short_name}_{hd_count:02d}H_{cfg[0]}_{sbr_save_name}",
-                "MAX_QTY": 500,
+                "MAX_QTY": config.MAX_QUERY_QTY,
                 "DESCRIPTION": sbr_info.strip(),
             }
             request_str = f"plt={request_dict}"
@@ -271,4 +271,125 @@ with st.expander("Gui Request", expanded=True):
 
     st.button("Submit GUI Request", on_click=submit_gui_request_and_clear)
 
+
+with st.expander("SN Upload Request", expanded=False):
+    # File uploader for CSV
+    uploaded_file = st.file_uploader(
+        "Upload CSV file (must contain SERIAL_NUM, TRANS_SEQ, GROUP_NAME columns)",
+        type=['csv'],
+        key="sn_upload_file"
+    )
+
+    # Description text box for SN Upload
+    sn_upload_description = st.text_input(
+        "Description",
+        value="",
+        key="sn_upload_description",
+        help="Enter a description for this SN upload request"
+    )
+    
+    if uploaded_file is not None:
+        try:
+            # Read the CSV file
+            df = pd.read_csv(uploaded_file)
+            
+            # Validate required columns
+            required_cols = ['SERIAL_NUM', 'TRANS_SEQ', 'GROUP_NAME']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            
+            if missing_cols:
+                st.error(f"Missing required columns: {', '.join(missing_cols)}")
+            else:
+                st.success(f"File uploaded successfully! Total rows: {len(df)}")
+                
+                st.subheader("Summary by Group")
+                group_summary = df.groupby('GROUP_NAME').agg({ 'SERIAL_NUM': 'count',}).reset_index()
+                group_summary.columns = ['GROUP_NAME', 'Count']
+                
+                # Display summary table
+                st.dataframe(group_summary)
+                
+                # Display total count
+                st.metric("Total Records", len(df))
+                st.metric("Total Groups", df['GROUP_NAME'].nunique())
+
+                # Button to show total row count
+                if st.button("Count Total Rows", key="count_rows_btn"):
+  
+                    template_string = "plt={'FEATURE_CHECKING':"",'JSL_SCRIPT':'ExecutePythonScript','PY_SCRIPT':'getSN_TS_input.py', 'CSV_SN_LOC':r'R:\SU373GE_02-14495', 'ATTR_FILTER': {}, 'MAX_QTY': 15000 }"
+                    # Button to submit GUI request
+                    if 1:
+
+                        query_hist  = config.QUERY_REQUEST_LOG_FILE_HISTORY
+                        query_hist_header = config.QUERY_REQUEST_LOG_FILE_HISTORY_HEADER
+                        for group_name in group_summary['GROUP_NAME'].unique():
+
+                            df_filtered = df[df['GROUP_NAME'] == group_name]
+                            # Check if folder exists, create if not
+                            folder_path = os.path.join("r:/", group_name)
+                            if not os.path.exists(folder_path):
+                                os.makedirs(folder_path)
+                            
+                            # Save filtered dataframe to CSV in the group folder
+                            csv_filename = f"SN.csv"
+                            csv_path = os.path.join(folder_path, csv_filename)
+                            df_filtered.to_csv(csv_path, index=False)
+  
+
+                            sbr_save_name = sbr.replace(',', '_').strip().upper()
+                            sbr_save_name = sbr_save_name.replace(' ', '').strip().upper()
+                            st.write(f"sbr_save_name: {sbr_save_name}")
+                            request_dict = {
+                                "FEATURE_CHECKING": "",
+                                "JSL_SCRIPT": "ExecutePythonScript",
+                                "PY_SCRIPT": "getSN_SN_TS_input.py",
+                                "CSV_SN_LOC": folder_path,
+                                "ATTR_FILTER": {},
+                                "MAX_QTY": config.MAX_QUERY_QTY,
+                                "DESCRIPTION": sn_upload_description.strip(),
+                            }
+
+                            request_str = f"plt={request_dict}"
+                            # Save to log file
+                            try:
+                                log_path = config.QUERY_REQUEST_LOG_FILE
+                                # Read all existing lines to avoid duplicates
+                                with open(log_path, "a+", encoding="utf-8") as f:
+                                    f.seek(0)
+                                    existing_lines = set(line.strip() for line in f.readlines())
+                                    if request_str.strip() not in existing_lines:
+                                        pass
+                                        f.write(f"{request_str}\n")
+
+                                with open(query_hist, "a+", encoding="utf-8") as f_hist:
+                                    # If file is new, write header
+                                    f_hist.seek(0)
+                                    if f_hist.readline() == "":
+                                        f_hist.write(",".join(query_hist_header) + "\n")
+                                    from datetime import datetime
+
+                                    user = st.session_state.get("user_name", "anonymous")
+                                    dt_str = datetime.utcnow().isoformat(timespec="seconds")
+                                    row = [
+                                        user,
+                                        dt_str,
+                                        "",
+                                        "",
+                                        "",
+                                        group_name,
+                                        group_name,
+                                        sn_upload_description,
+                                        f'"{request_str}"'
+                                    ]
+                                    f_hist.write(",".join(row) + "\n")
+
+                            except Exception as e:
+                                st.error(f"Failed to record GUI request: {e}")
+                        st.success("Requests submitted.")                    
+                
+        except Exception as e:
+            st.error(f"Error reading file: {e}")
 st.caption(f"Total requests in queue: {lineCount()}")
+
+
+
