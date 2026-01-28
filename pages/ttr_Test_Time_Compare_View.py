@@ -1534,27 +1534,53 @@ with st.expander("Test Time By State", expanded=False):
             df_dist = df_dist.dropna(subset=['TEST_TIME'])
 
 
-            # Default plot settings (no user controls): Violin chart, color by pco if available, linear scale, no clipping
-            chart_type = "Violin"
-            color_arg = "pco" if "pco" in df_dist.columns else None
-            y_scale = "linear"
+
 
             hover_cols = [c for c in ["SERIAL_NUM", "TRANS_SEQ"] if c in df_dist.columns]
             # st.write(f"Hover columns: {hover_cols}")
             # st.write(f"Hover columns: {df_dist.columns}")
 
+            # Add a selectbox to choose what to plot on x-axis
 
-            if df_dist.empty or ("OP_STATE" not in df_dist.columns):
+            plot_list = ["OP_STATE", "CMS_CONFIG", "NUM_HEADS", "CAPACITY", "HEAD", "PN3", 
+                 "IR_DRIVE", "POWER_LOSS_DRIVE", "WAFER_TYPE", "HGA_SORT_06", "CAL2_FPW", "SBR", "STATE_NAME","GROUP_NAME", 'config']
+            plot_by = st.selectbox(
+                "Plot by",
+                plot_list,
+                index=0,
+                key="plot_by_state_chart"
+            )
+
+            # Default plot settings (no user controls): Violin chart, color by pco if available, linear scale, no clipping
+            chart_type = "Violin"
+            # Set color based on plot_by selection
+            # If plotting by OP_STATE, color by pco; otherwise color by plot_by column
+            if plot_by == "OP_STATE":
+                color_arg = "pco" if "pco" in df_dist.columns else None
+            else:
+                color_arg = plot_by if plot_by in df_dist.columns else None
+            y_scale = "linear"
+
+            # Create the appropriate column based on selection
+            if plot_by == "OP_STATE":
+                df_dist['plot_column'] = df_dist['OPERATION'].astype(str) + " - " + df_dist['STATE_NAME'].astype(str)
+            elif plot_by in plot_list:
+                df_dist['plot_column'] = df_dist[plot_by].astype(str) if plot_by in df_dist.columns else "Unknown"
+            if df_dist.empty or ("plot_column" not in df_dist.columns):
                 st.warning("No data remains for selected filters / clip range.")
+                st.write(df_dist.columns)
+                st.write(len(df_dist))
+                st.write(("plot_column" not in df_dist.columns))
+                st.write(df_dist.empty )
                 st.stop()
             if chart_type == "Strip (Jitter)":  # unreachable with default violin but kept for easy future toggle
                 # Manual jitter using scatter since px.strip doesn't support 'jitter' kwarg in current Plotly version
                 # Map OPERATION categories to numeric positions then add random noise
-                if "OP_STATE" in df_dist.columns:
+                if "plot_column" in df_dist.columns:
                     # Use only present operation categories for jitter mapping
-                    op_categories = list(df_dist['OP_STATE'].cat.categories if isinstance(df_dist['OP_STATE'], pd.Categorical) else list(df_dist['OP_STATE'].unique()))
+                    op_categories = list(df_dist['plot_column'].cat.categories if isinstance(df_dist['plot_column'], pd.Categorical) else list(df_dist['plot_column'].unique()))
                     op_index_map = {op: i for i, op in enumerate(op_categories)}
-                    df_dist['_op_x'] = df_dist['OP_STATE'].map(op_index_map).astype(float)
+                    df_dist['_op_x'] = df_dist['plot_column'].map(op_index_map).astype(float)
                     # Add jitter within +/-0.3 range
                     rng = np.random.default_rng(seed=42)  # deterministic for reproducibility per rerun
                     df_dist['_op_x_jitter'] = df_dist['_op_x'] + rng.uniform(-0.3, 0.3, size=len(df_dist))
@@ -1563,7 +1589,7 @@ with st.expander("Test Time By State", expanded=False):
                         x="_op_x_jitter",
                         y="TEST_TIME",
                         color=color_arg,
-                        hover_data=hover_cols + ["STATE_NAME"],
+                        hover_data=hover_cols + plot_by,
                     )
                     # Replace numeric axis ticks with category labels
                     fig.update_xaxes(
@@ -1577,18 +1603,18 @@ with st.expander("Test Time By State", expanded=False):
             elif chart_type == "Box":
                 fig = px.box(
                     df_dist,
-                    x="OP_STATE",
+                    x="plot_column",
                     y="TEST_TIME",
                     color=color_arg,
                     hover_data=hover_cols,
                 )
-                if "OP_STATE" in df_dist.columns and isinstance(df_dist['OP_STATE'], pd.Categorical):
-                    fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OP_STATE'].cat.categories))
+                if "plot_column" in df_dist.columns and isinstance(df_dist['plot_column'], pd.Categorical):
+                    fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['plot_column'].cat.categories))
             else:  # Violin
                 
                 fig = px.violin(
                     df_dist,
-                    x="OP_STATE",
+                    x="plot_column",
                     y="TEST_TIME",
                     color=color_arg,
                     hover_data=hover_cols,
@@ -1599,24 +1625,24 @@ with st.expander("Test Time By State", expanded=False):
                 fig = add_violin_labels(
                     fig,
                     df=df_dist,
-                    x_col="OP_STATE",
+                    x_col="plot_column",
                     y_col="TEST_TIME",
                     color_col=color_arg,
                     label_metric="mean",  # or "mean"
                 )
-                if "OP_STATE" in df_dist.columns and isinstance(df_dist['OP_STATE'], pd.Categorical):
-                    fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OP_STATE'].cat.categories))
+                if "plot_column" in df_dist.columns and isinstance(df_dist['plot_column'], pd.Categorical):
+                    fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['plot_column'].cat.categories))
 
             fig.update_layout(
                  dragmode="select",  # Default to user selection mode
                 yaxis_title="Test Time (hours)",
-                xaxis_title="Operation",
+                xaxis_title=color_arg,
                 yaxis_type=y_scale,
-                legend_title=("pco" if color_arg == "pco" else None),
+                legend_title=(color_arg),
                 margin=dict(l=10, r=10, t=40, b=10)
             )
             event_state = st.plotly_chart(fig, use_container_width=True,key="violin_state",on_select="rerun")
-            st.caption("Distribution of TEST_TIME across selected operations and filters.")
+            st.caption(f"Distribution of TEST_TIME across selected operations and filters.")
 
             pts_state = event_state.selection.points  # Streamlit PlotlySelectionState.points :contentReference[oaicite:2]{index=2}
 
@@ -1633,7 +1659,7 @@ with st.expander("Test Time By State", expanded=False):
                     violin_points_data.append({
                     "SN": SN,
                     "TS": TS,
-                    "OPER-STATE": OPER,
+                    color_arg: OPER,
                     "Test Time": Test_Time,
                     "Group_Name": Group_Name
                     })
