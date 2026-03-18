@@ -835,7 +835,7 @@ def to_two_level_dataframe(df: pd.DataFrame):
     df2.columns = pd.MultiIndex.from_tuples(new_cols)
     return df2
 
-def test_time_block(title, df, key_prefix, groupby_cols=None):
+def test_time_block(title, df, key_prefix, groupby_cols=None, group_by=None):
     st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
 
     c1, c2 = st.columns(2)
@@ -871,16 +871,7 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
         return
     if groupby_cols:
         #st.write("Grouping by:", groupby_cols)    
-        # Add a selectbox to choose what to plot on x-axis
-        group_list = ["GROUP_NAME", "CMS_CONFIG", "NUM_HEADS", "CAPACITY", "HEAD", "PN3", 
-                 "IR_DRIVE", "POWER_LOSS_DRIVE", "WAFER_TYPE", "HGA_SORT_06", "CAL2_FPW", "SUB_BUILD_GROUP", "STATE_NAME","GROUP_NAME", 'config']
-        group_by = st.selectbox(
-            "By Attr",
-            group_list,
-            index=0,
-            key=
-            "plot_by_operation_chart"
-        )
+        
         select_col = ["program","pco", "config"]
         if group_by != "GROUP_NAME" and group_by in group_list:
             select_col = [group_by]
@@ -1259,8 +1250,21 @@ with st.expander("CMS Config", expanded=False):
 
         st.dataframe(pivot_df_cms, use_container_width=False)
 m_select_col = None
+groupby_cols=["program", "config", "pco", "Category"]
+# Add a selectbox to choose what to plot on x-axis
+group_list = ["GROUP_NAME", "CMS_CONFIG", "NUM_HEADS", "CAPACITY", "HEAD", "PN3", 
+            "IR_DRIVE", "POWER_LOSS_DRIVE", "WAFER_TYPE", "HGA_SORT_06", "CAL2_FPW", "SUB_BUILD_GROUP", "STATE_NAME","GROUP_NAME", 'config']
+
+group_by = st.selectbox(
+    "Test Time By Attr",
+    group_list,
+    index=0,
+    key=
+    "plot_by_operation_chart"
+)
+
 with st.expander("Test Time By Operation", expanded=False):
-    m_select_col = test_time_block("Test Time", source_df, "tt_overall", groupby_cols=["program", "config", "pco", "Category"])
+    m_select_col = test_time_block("Test Time", source_df, "tt_overall", groupby_cols, group_by)
 
 
 # -------------------------------------------------------------------
@@ -1481,7 +1485,7 @@ with st.expander("Test Time By State", expanded=False):
         if not df_state.empty:
 
             # Group by state and calculate mean and count
-            if "STATE_NAME" in df_state.columns:
+            if "STATE_NAME" in df_state.columns and len(m_select_col) > 1:
 
                 state_summary = df_state.pivot_table(
                     index=[ "OPERATION", "STATE_NAME"],
@@ -1571,6 +1575,27 @@ with st.expander("Test Time By State", expanded=False):
                 col_widths = {col: {"width": 120, 'help': col} for col in state_summary.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
 
                 st.dataframe(styled, use_container_width=True, column_config=col_widths, height=15*32)
+
+            elif m_select_col is not None and len(m_select_col) == 1 and m_select_col[0] in df_dist.columns:
+                color_arg = m_select_col[0]
+
+                state_summary = df_state.pivot_table(
+                    index=[ "OPERATION", "STATE_NAME"],
+                    columns= m_select_col[0], #"program","pco", "config"
+                    values=["TestTime(hrs)", "N"],
+                    aggfunc={"TestTime(hrs)": "mean", "N": "sum"},
+                    fill_value=0
+                ).rename(columns={"N": "RecordCount"}, level=0).reset_index()
+
+                
+                state_summary = state_summary[
+                    ["OPERATION", "STATE_NAME", "TestTime(hrs)", "RecordCount"]
+                ]
+
+
+                #st.dataframe(state_summary, use_container_width=True, column_config=col_widths, height=15*32)
+                st.dataframe(state_summary, use_container_width=True, height=15*32)
+
             else:
                 st.warning("The dataset does not contain a 'STATE' column.")
         else:
@@ -1618,12 +1643,14 @@ with st.expander("Test Time By State", expanded=False):
 
             plot_list = ["OP_STATE", "CMS_CONFIG", "NUM_HEADS", "CAPACITY", "HEAD", "PN3", 
                  "IR_DRIVE", "POWER_LOSS_DRIVE", "WAFER_TYPE", "HGA_SORT_06", "CAL2_FPW", "SBR", "STATE_NAME","GROUP_NAME", 'config']
-            plot_by = st.selectbox(
-                "Plot by",
-                plot_list,
-                index=0,
-                key="plot_by_state_chart"
-            )
+            
+            plot_by = m_select_col[0] if m_select_col is not None and len(m_select_col) == 1 and m_select_col[0] in df_dist.columns else "OP_STATE"
+            # plot_by = st.selectbox(
+            #     "Plot by",
+            #     plot_list,
+            #     index=0,
+            #     key="plot_by_state_chart"
+            # )
 
             # Default plot settings (no user controls): Violin chart, color by pco if available, linear scale, no clipping
             chart_type = "Violin"
