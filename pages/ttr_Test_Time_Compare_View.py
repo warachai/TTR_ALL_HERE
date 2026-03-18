@@ -2,6 +2,11 @@
 # http://localhost:8501/ttr_Test_Time_View?prog_0=MARLIN&cfg_0=SMR&pco_0=PCO2&prog_1=DORADO&cfg_1=HSMR&pco_1=PCO3
 # http://localhost:8501/ttr_Test_Time_Compare_View?prog_0=SUMMIT&cfg_0=CMR&pco_0=PYTHON_373&prog_1=SUMMIT&cfg_1=CMR&pco_1=PYTHON_374
 
+# Numpy compatibility shim for packages expecting np.bool8
+import numpy as np  # must run before other imports
+if not hasattr(np, "bool8"):
+    np.bool8 = np.bool_
+
 import textwrap
 import streamlit as st
 import pandas as pd
@@ -13,6 +18,12 @@ from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from st_aggrid.shared import JsCode
 import config
 import plotly.graph_objects as go
+import re
+
+from bokeh.models.widgets import Button
+from bokeh.models import CustomJS
+from bokeh.events import ButtonClick
+from streamlit_bokeh_events import streamlit_bokeh_events
 
 st.set_page_config(page_title="Test Time View", layout="wide")
 
@@ -466,6 +477,7 @@ def load_merged_drv_inv():
     for root, dirs, files in os.walk(test_time_folder):
         if "DRV_INV.csv" in files:
             filepath = os.path.join(root, "DRV_INV.csv")
+
             
             # Extract hierarchy from path: R:\Test_Time_Hist\{program}\{config}\{pco}\DRV_INV.csv
             rel_path = os.path.relpath(filepath, test_time_folder)
@@ -565,7 +577,7 @@ for slot_idx in range(2):
 # TOP BOX – combo boxes for Program / Config Type / PCO
 # -------------------------------------------------------------------
 
-program_options = ["NONE", "SUMMIT", "MARLIN", "MARLIN BP", "DORADO"]
+program_options = ["NONE", "SUMMIT", "MARLIN", "MARLIN BP", "DORADO", "OSPREY"]
 config_options  = ["NONE", "CMR", "SMR", "HSMR"]
 pco_options     = ["NONE", "PCO1", "PCO2", "PCO3"]
 
@@ -804,6 +816,25 @@ def apply_filter_flex(df, text, logic="OR", search_cols=None, col_alias=None):
 
     return df[final_mask]
 
+def to_two_level_dataframe(df: pd.DataFrame):
+    new_cols = []
+
+    for c in df.columns:
+        if c == "OPERATION":
+            # OPERATION อยู่เดี่ยว
+            new_cols.append(("OPERATION", ""))
+        else:
+            m = re.match(r"^(mean|count)_(.+)$", c)
+            if m:
+                top, sub = m.groups()
+                new_cols.append((top, sub))
+            else:
+                new_cols.append(("", c))
+
+    df2 = df.copy()
+    df2.columns = pd.MultiIndex.from_tuples(new_cols)
+    return df2
+
 def test_time_block(title, df, key_prefix, groupby_cols=None):
     st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
 
@@ -832,15 +863,31 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
     )
 
     # If no data selected (empty df) show blank table immediately
+    
     if df_f.empty:
         st.dataframe(pd.DataFrame(), use_container_width=True, height=8*32)
         return
     if not has_query_params:
         return
     if groupby_cols:
+        #st.write("Grouping by:", groupby_cols)    
+        # Add a selectbox to choose what to plot on x-axis
+        group_list = ["GROUP_NAME", "CMS_CONFIG", "NUM_HEADS", "CAPACITY", "HEAD", "PN3", 
+                 "IR_DRIVE", "POWER_LOSS_DRIVE", "WAFER_TYPE", "HGA_SORT_06", "CAL2_FPW", "SUB_BUILD_GROUP", "STATE_NAME","GROUP_NAME", 'config']
+        group_by = st.selectbox(
+            "By Attr",
+            group_list,
+            index=0,
+            key=
+            "plot_by_operation_chart"
+        )
+        select_col = ["program","pco", "config"]
+        if group_by != "GROUP_NAME" and group_by in group_list:
+            select_col = [group_by]
+
         df_view = df_f.pivot_table(
             index=[ "OPERATION"],
-            columns=["program","pco", "config"],
+            columns= select_col,
             values="TEST_TIME",
             aggfunc=["mean", "count"],
             fill_value=0
@@ -884,20 +931,21 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
             total_row["OPERATION"] = "Total"
             df_view = pd.concat([df_view, pd.DataFrame([total_row])], ignore_index=True)
 
-            column_order = getPCOColumnOrder()
-            #st.write("Column order:", column_order, len(column_order)) 
-            if len(column_order) == 2:
-                cols = df_view.columns.tolist()
-                # Reorder TestTime and N columns based on column_order
-                #st.write("Columns before reordering:", cols, column_order)
-                if column_order[0] not in cols[1]:
-                    st.write("Reordering columns for display...")
-                    cols[1], cols[2],cols[3], cols[4]  = cols[2], cols[1], cols[4], cols[3]
-                    df_view = df_view[cols]            
+            if group_by == "GROUP_NAME":
+                column_order = getPCOColumnOrder()
+                #st.write("Column order:", column_order, len(column_order)) 
+                if len(column_order) == 2:
+                    cols = df_view.columns.tolist()
+                    # Reorder TestTime and N columns based on column_order
+                    #st.write("Columns before reordering:", cols, column_order)
+                    if column_order[0] not in cols[1]:
+                        st.write("Reordering columns for display...")
+                        cols[1], cols[2],cols[3], cols[4]  = cols[2], cols[1], cols[4], cols[3]
+                        df_view = df_view[cols]            
 
-            tt_cols = [c for c in df_view.columns if c.startswith("mean_")]
-            if len(tt_cols) == 2:
-                df_view["Diff(Hrs.)"] = df_view[tt_cols[0]] - df_view[tt_cols[1]]            
+                tt_cols = [c for c in df_view.columns if c.startswith("mean_")]
+                if len(tt_cols) == 2:
+                    df_view["Diff(Hrs.)"] = df_view[tt_cols[0]] - df_view[tt_cols[1]]            
     else:
         df_view = df_f
 
@@ -920,8 +968,26 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
     # Set fixed width for columns 1-5 (after OPERATION)
     col_widths = {col: {"width": 120, 'help': col} for col in df_view.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
 
-    st.dataframe(df_view, use_container_width=False, column_config=col_widths, height=15*32)
 
+    df_view2 = to_two_level_dataframe(df_view)
+    # Add option to toggle between text and table view
+    view_mode = st.radio(
+        "Display Mode",
+        ["Table", "Text"],
+        horizontal=True,
+        key=f"{key_prefix}_view_mode"
+    )
+    
+    if view_mode == "Table":
+        st.dataframe(df_view2, use_container_width=False, column_config=col_widths, height=15*32)
+    else:
+        # Display df_view2 as code for debugging/inspection
+        csv = df_view2.to_csv(index=False).encode('utf-8')
+        st.code(df_view2.to_string(), language="text")
+
+
+    
+    #st.write(tsv_json)
     # Download filtered data
     csv = df_f.to_csv(index=False).encode('utf-8')
     st.download_button(
@@ -1953,12 +2019,16 @@ def load_test_time_hist_info():
     
     hist_fil = config.QUERY_REQUEST_LOG_FILE_HISTORY
     if os.path.exists(hist_fil):
+
         try:
             df_hist = pd.read_csv(hist_fil)
+            
             return df_hist
-        except Exception:
-            pass
+        except Exception as e:
+            st.error(f"Error loading historical data: {e}")
+
     else:
+        st.info(f"No historical test time data found at {hist_fil}")
         return pd.DataFrame()
 source_df = load_test_time_hist_info()
 TestTime_Hist_block("Test Time Hist", source_df)
