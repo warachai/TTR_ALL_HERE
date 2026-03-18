@@ -998,6 +998,8 @@ def test_time_block(title, df, key_prefix, groupby_cols=None):
         key=f"{key_prefix}_download_btn"
     )
 
+    return select_col
+
 def _get_attr_default(idx):
     """Get attribute default from query params."""
     attr_val = filter_params.get(f"attr_{idx}", "")
@@ -1256,9 +1258,9 @@ with st.expander("CMS Config", expanded=False):
         ).reset_index()
 
         st.dataframe(pivot_df_cms, use_container_width=False)
-
+m_select_col = None
 with st.expander("Test Time By Operation", expanded=False):
-    test_time_block("Test Time", source_df, "tt_overall", groupby_cols=["program", "config", "pco", "Category"])
+    m_select_col = test_time_block("Test Time", source_df, "tt_overall", groupby_cols=["program", "config", "pco", "Category"])
 
 
 # -------------------------------------------------------------------
@@ -1266,9 +1268,11 @@ with st.expander("Test Time By Operation", expanded=False):
 # -------------------------------------------------------------------
 
 with st.expander("Test Time Distribution", expanded=False):
+
     if not has_query_params:
         pass
      # Use filtered data if available
+       
     elif "tt_filtered" in st.session_state and not st.session_state.tt_filtered.empty:
 
         #df_dist = df_raw.copy()
@@ -1293,7 +1297,11 @@ with st.expander("Test Time Distribution", expanded=False):
 
         # Default plot settings (no user controls): Violin chart, color by pco if available, linear scale, no clipping
         chart_type = "Violin"
-        color_arg = "pco" if "pco" in df_dist.columns else None
+
+        if m_select_col is not None and len(m_select_col) == 1 and m_select_col[0] in df_dist.columns:
+            color_arg = m_select_col[0]
+        else:
+            color_arg = "pco" if "pco" in df_dist.columns else None
         y_scale = "linear"
 
         hover_cols = [c for c in ["SERIAL_NUM", "TRANS_SEQ"] if c in df_dist.columns]
@@ -1339,7 +1347,7 @@ with st.expander("Test Time Distribution", expanded=False):
             if "OPERATION" in df_dist.columns and isinstance(df_dist['OPERATION'], pd.Categorical):
                 fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OPERATION'].cat.categories))
         else:  # Violin
-            
+
             fig = px.violin(
                 df_dist,
                 x="OPERATION",
