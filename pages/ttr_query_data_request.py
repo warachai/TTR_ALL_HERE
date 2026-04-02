@@ -52,8 +52,8 @@ def submit_request_gui():
                     with open(log_path, "a+", encoding="utf-8") as f:
                         for line in lines:
                             f.write(f"{line}\n")
-                except Exception:
-                    pass
+                except Exception as e:
+                    st.error(f"Failed to write to log file: {e}")
                 
             except Exception as e:
                 st.error(f"Failed to record request: {e}")
@@ -140,7 +140,7 @@ with st.expander("Gui Request", expanded=True):
     # Product input as combobox
     product = st.selectbox(
         "Product",
-        options=["DORADO", "MARLIN", "MARLIN BP", "SUMMIT"],  # Add more as needed
+        options=["DORADO", "MARLIN", "MARLIN BP", "SUMMIT", "OSPREY", "CIMMARON_BP", "V15"],  # Add more as needed
         key="gui_product"
     )
 
@@ -210,7 +210,7 @@ with st.expander("Gui Request", expanded=True):
             }
 
             sbr_save_name = sbr.replace(',', '_').strip().upper()
-            sbr_save_name = sbr_save_name.replace(' ', '').strip().upper()
+            sbr_save_name = sbr_save_name.replace(' ', ',').strip().upper()
             st.write(f"sbr_save_name: {sbr_save_name}")
             request_dict = {
                 "FEATURE_CHECKING": "",
@@ -314,7 +314,7 @@ with st.expander("SN Upload Request", expanded=False):
                 st.metric("Total Groups", df['GROUP_NAME'].nunique())
 
                 # Button to show total row count
-                if st.button("Count Total Rows", key="count_rows_btn"):
+                if st.button("Submit Request", key="count_rows_btn"):
   
                     template_string = "plt={'FEATURE_CHECKING':"",'JSL_SCRIPT':'ExecutePythonScript','PY_SCRIPT':'getSN_TS_input.py', 'CSV_SN_LOC':r'R:\SU373GE_02-14495', 'ATTR_FILTER': {}, 'MAX_QTY': 15000 }"
                     # Button to submit GUI request
@@ -389,7 +389,187 @@ with st.expander("SN Upload Request", expanded=False):
                 
         except Exception as e:
             st.error(f"Error reading file: {e}")
+            pass
+
+def apply_filter(df, text, logic="OR", search_cols=None):
+    if not text:
+        return df
+    if search_cols is None:
+        search_cols = df.columns
+
+    terms = [t.strip() for t in text.split() if t.strip()]
+    if not terms:
+        return df
+
+    df_s = df.copy()
+    df_s[search_cols] = df_s[search_cols].astype(str)
+
+    mask = None
+    for term in terms:
+        term_mask = df_s[search_cols].apply(
+            lambda c: c.str.contains(term, case=False, na=False)
+        ).any(axis=1)
+        if mask is None:
+            mask = term_mask
+        elif logic == "AND":
+            mask &= term_mask
+        else:
+            mask |= term_mask
+    return df[mask]
+
+
+def count_test_time_hist_info(product,media_format,save_name):
+    
+    if pd.isna(product) or pd.isna(media_format) or pd.isna(save_name):
+        return 0
+    
+    currnet_config_file = os.path.join( config.TT_HISTORY_PATH,str(product),str(media_format),str(save_name), config.GROUP_INFO_FILE_NAME)
+    if os.path.exists(currnet_config_file):
+        try:
+            with open(currnet_config_file, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        except Exception:
+            line_count = 0
+            pass
+
+        return len(lines)
+
+    else:
+
+        return 0
+
+
+def TestTime_Hist_block(title, df, groupby_cols=None):
+    
+    with st.expander(f"{title}", expanded=False):
+
+        c0, c1, c2 = st.columns(3)
+        default_programs = ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT", "TSR"]
+        params = st.query_params
+
+        raw_program_params = params.get("program", params.get("product", []))
+        with c0:
+            program_filter = st.multiselect(
+                "Select Product(s)",
+                ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT"],
+                default=default_programs if raw_program_params else []
+            )
+        with c1:
+            filter_text_tt_hist = st.text_input(
+            "Filter Text Box",
+            "",
+            placeholder="Search in all columns...",
+            key="filter_text_tt_hist"
+            )
+
+        with c2:
+            logic_tt_hist = st.radio(
+            "Search Mode",
+            ["OR", "AND"],
+            horizontal=True,
+            key="logic_tt_hist",
+            help="OR: Match any word | AND: Match all words, [col]_null to search for null values"
+        )
+        df_org = df.copy()
+        if program_filter:  # If any programs are selected
+            df = df[df['Product'].isin(program_filter)]
+        else:  # If nothing selected, show all programs
+            df = df_org
+        df_f = apply_filter(
+            df,
+            filter_text_tt_hist,
+            logic_tt_hist,
+            config.QUERY_REQUEST_LOG_FILE_HISTORY_HEADER,
+        )
+
+        KEY_COL = "REQUEST_STRING"
+
+        def prepare_editor_df(df_f: pd.DataFrame) -> pd.DataFrame:
+            df = df_f.copy()
+
+            # calculate / refresh Total Data every time
+            df["Rows"] = df.apply(
+                lambda row: count_test_time_hist_info(
+                    row["Product"],
+                    row["MEDIA_FORMAT"],
+                    row["SAVE_NAME"]
+                ),
+                axis=1
+            )
+
+            if "Selected" not in df.columns:
+                df["Selected"] = False
+
+
+
+            if "df_editor" in st.session_state:
+                old_df = st.session_state.df_editor.copy()
+
+                if KEY_COL in old_df.columns and KEY_COL in df.columns:
+                    selected_map = old_df.set_index(KEY_COL)["Selected"].to_dict()
+                    df["Selected"] = df[KEY_COL].map(selected_map).fillna(False)
+                    
+            cols = ["Selected", "Rows"] + [col for col in df.columns if col not in ["Selected", "Rows"]]
+            df = df[cols]
+
+            return df
+
+        st.session_state.df_editor = prepare_editor_df(df_f)
+        # show editor
+        edited_df = st.data_editor(
+            st.session_state.df_editor,
+            key="table",
+            disabled=[col for col in st.session_state.df_editor.columns if col != "Selected"],
+            use_container_width=True,
+            height=15 * 30
+        )
+        # always sync latest UI back into session_state
+        st.session_state.df_editor = edited_df.copy()
+        st.metric("Total Selected", st.session_state.df_editor["Selected"].sum())
+        if st.button("Request Refresh Data."):
+            
+            #clicked_rows = edited_df[edited_df["Selected"] == True]
+            clicked_rows = st.session_state.df_editor[
+                            st.session_state.df_editor["Selected"] == True
+                            ]
+
+            if not clicked_rows.empty:
+                log_path = config.QUERY_REQUEST_LOG_FILE
+                # Read all existing lines to avoid duplicates
+                with open(log_path, "a+", encoding="utf-8") as f:
+                    f.seek(0)
+                    existing_lines = set(line.strip() for line in f.readlines())
+
+                    for i, row in clicked_rows.iterrows():
+                        request_str = row['REQUEST_STRING']
+                        st.write(f"Running code for {request_str}")
+
+                        if request_str.strip() not in existing_lines:
+                            pass
+                            f.write(f"{request_str}\n")
+                        st.session_state.df_editor.at[i, "Selected"] = False
+
+                st.rerun()  # Refresh the page to reset checkboxes and reflect any changes
+
+
+
+def load_test_time_hist_info():
+    
+    hist_fil = config.QUERY_REQUEST_LOG_FILE_HISTORY
+    if os.path.exists(hist_fil):
+
+        try:
+            df_hist = pd.read_csv(hist_fil)
+            
+            return df_hist
+        except Exception as e:
+            st.error(f"Error loading historical data: {e}")
+
+    else:
+        st.info(f"No historical test time data found at {hist_fil}")
+        return pd.DataFrame()
+    
+source_df = load_test_time_hist_info()
+TestTime_Hist_block("Test Time Hist", source_df)
+
 st.caption(f"Total requests in queue: {lineCount()}")
-
-
-
