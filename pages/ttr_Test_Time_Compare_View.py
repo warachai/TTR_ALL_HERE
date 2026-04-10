@@ -1455,7 +1455,7 @@ with st.expander("Test Time By State", expanded=False):
                 if sn and ts:
                     df_state = df_state[~((df_state['SERIAL_NUM'].astype(str) == sn) & (df_state['TRANS_SEQ'].astype(str) == ts))]
 
-        c1_tt, c2_tt = st.columns(2)
+        c1_tt, c2_tt, c3_tt = st.columns(3)
         with c1_tt:
             filter_text_tt_op_tt = st.text_input(
             "Filter Text Box",
@@ -1473,7 +1473,24 @@ with st.expander("Test Time By State", expanded=False):
             key="logic_tt_test"
             
         )
+            
+        with c3_tt:
+            avg_mode = st.radio(
+            "Avg Mode",
+            ["Normal", "Weighted"],
+            horizontal=True,
+            help="Normal: Regular average | Weighted: Weighted average based on counts",
+            key="avg_mode_test"
+            
+        )
 
+        group_cols_cnt =  ["SERIAL_NUM", "TRANS_SEQ", "OPERATION", "GROUP_NAME"]
+        df_cnt = df_state.groupby(group_cols_cnt, dropna=False).agg(N=('SERIAL_NUM', 'size')).reset_index()
+        total_rows = len(df_cnt)
+        print(f"[summary] Total rows in df_cnt: {total_rows}")
+
+        group_cols_opr_cnt = ["OPERATION", "GROUP_NAME"]
+        df_opr_cnt = df_cnt.groupby(group_cols_opr_cnt, dropna=False).agg(OPER_CNT=('SERIAL_NUM', 'size')).reset_index()
 
         df_state = apply_filter(
             df_state,
@@ -1481,20 +1498,31 @@ with st.expander("Test Time By State", expanded=False):
             logic_tt,
             ["program", "config", "pco", "STATE_NAME", "OPERATION"],
         )
-        
+
+
         if not df_state.empty:
 
             # Group by state and calculate mean and count
             if "STATE_NAME" in df_state.columns and len(m_select_col) > 1:
 
+                
+                df_state = pd.merge(df_state, df_opr_cnt, on=["OPERATION", "GROUP_NAME"], how="left")
                 state_summary = df_state.pivot_table(
                     index=[ "OPERATION", "STATE_NAME"],
-                    columns=["pco"], #"program","pco", "config"
-                    values=["TestTime(hrs)", "N"],
-                    aggfunc={"TestTime(hrs)": "mean", "N": "sum"},
+                    columns=["pco",], #"program","pco", "config"
+                    values=["TestTime(hrs)", "N", 'OPER_CNT',"SERIAL_NUM"],
+                    aggfunc={"TestTime(hrs)": "mean", "N": "sum", 'OPER_CNT': 'mean', "SERIAL_NUM": "size"},
                     fill_value=0
-                ).reset_index()
+                ).reset_index() 
 
+                # st.write(state_summary.columns)
+                # st.write(state_summary)
+
+                if avg_mode == "Weighted":
+                    state_summary['TestTime(hrs)'] = (state_summary['TestTime(hrs)']  * state_summary['SERIAL_NUM']) / state_summary['OPER_CNT'].replace(0, np.nan)  # avoid division by zero
+                    state_summary['N'] = state_summary['OPER_CNT'].replace(0, np.nan).round().astype("Int64")
+
+                state_summary = state_summary.drop(columns=['OPER_CNT', 'SERIAL_NUM'])
 
                 # Flatten MultiIndex columns into readable single-level names
                 def _flatten(col):
@@ -1505,6 +1533,7 @@ with st.expander("Test Time By State", expanded=False):
                 state_summary.columns = [_flatten(c) for c in state_summary.columns]
 
                 column_order = getPCOColumnOrder()
+                
                 cols = state_summary.columns.tolist()
                 if len(column_order) == 2 and len(cols) >= 6:
                     # Reorder TestTime and N columns based on column_order
@@ -1786,7 +1815,7 @@ with st.expander("Test Time By Test", expanded=False):
     else:
         df_test = load_merged_test_time_by_test().copy()
 
-        c1_tt, c2_tt, c3_tt = st.columns(3)
+        c1_tt, c2_tt, c3_tt, c4_tt = st.columns(4)
         col_alias = {
             "STATE": "STATE_NAME",
             "OP": "OPERATION",
@@ -1821,6 +1850,15 @@ with st.expander("Test Time By Test", expanded=False):
             
             )
 
+        with c4_tt:
+            avg_mode_tt_op_tt = st.radio(
+            "Avg Mode",
+            ["Normal", "Weighted"],
+            horizontal=True,
+            help="Normal: Regular average | Weighted: Weighted average",
+            key="avg_mode_tt_op_tt"
+            
+            )
 
         df_test = apply_filter_flex(
             df_test,
@@ -1841,6 +1879,12 @@ with st.expander("Test Time By Test", expanded=False):
             #st.write("all operations mmm:", group_name_list)
             # column_order = getPCOColumnOrder()
             # df_test["pco"] = pd.Categorical(df_test["pco"], categories=column_order, ordered=True)
+            if avg_mode_tt_op_tt == "Weighted":
+                if "TestTime(hrs)_wgt" in df_test.columns:
+                    df_test["TestTime(hrs)"] = df_test["TestTime(hrs)_wgt"]
+                    df_test["N"] = df_test["OPER_CNT"]
+                else:
+                    st.warning("Weighted average column 'TestTime(hrs)_wgt' not found. Using unweighted 'TestTime(hrs)' instead.")
             tt_summary = df_test.pivot_table(
                     index=['TEST_NUMBER', 'PARAMETER_NAME',"STATE_NAME", "OPERATION"],
                     columns=["pco", "config"],
