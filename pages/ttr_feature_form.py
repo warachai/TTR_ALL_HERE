@@ -1,166 +1,184 @@
+#python -m streamlit run ttr_task_form.py
+#http://localhost:8501/?product=DORADO
 import streamlit as st
 import pandas as pd
-import numpy as np
+import config
+import os
+from streamlit import session_state as ss
+import uuid
 
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, JsCode
+st.set_page_config(page_title="SBR Query Data Request", layout="wide")
 
-st.set_page_config(page_title="Operation / Stage / Task Hierarchy", layout="wide")
+st.title("Query Data Request")
 
-st.title("ตัวอย่าง Hierarchical Table: Operation > Stage > Task")
+# Initialize session keys
+if "data_request_text" not in ss:
+	ss.data_request_text = ""
+if "last_request_id" not in ss:
+	ss.last_request_id = None
 
-# -----------------------------
-# 1) สร้างตัวอย่างข้อมูลหลายแถว
-# -----------------------------
-np.random.seed(1)
+def lineCount():
+    lines = []
+    try:
+        with open(config.QUERY_REQUEST_LOG_FILE, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except Exception:
+         line_count = 0
+         pass
 
-operations = ["OP_A", "OP_B", "OP_C"]
+    return len(lines)
 
-stages_by_op = {
-    "OP_A": ["A1_Load", "A2_Process", "A3_Unload"],
-    "OP_B": ["B1_Load", "B2_Process"],
-    "OP_C": ["C1_Inspect", "C2_Pack"],
-}
+def clear_text():
+    st.session_state["data_request_text_area"] = ""
 
-tasks_by_stage = {
-    "A1_Load":   ["T001_LoadTray", "T002_ScanBarcode", "T003_CheckPosition"],
-    "A2_Process":["T004_Align", "T005_Write", "T006_Verify"],
-    "A3_Unload": ["T007_UnloadTray", "T008_BufferStore"],
+def apply_filter(df, text, logic="OR", search_cols=None):
+    #st.write(f"origianl df length: {len(df)}, columns: {df.columns}")
+    if not text:
+        return df
+    if search_cols is None:
+        search_cols = df.columns
+        #st.write(f"origianl2 df length: {len(df)}, columns: {df.columns}")
 
-    "B1_Load":   ["T101_Load", "T102_PreCheck"],
-    "B2_Process":["T103_Test", "T104_Record", "T105_SaveResult"],
+    terms = [t.strip() for t in text.split() if t.strip()]
+    if not terms:
+        return df
 
-    "C1_Inspect":["T201_VisualCheck", "T202_Measure"],
-    "C2_Pack":   ["T203_Pack", "T204_Label", "T205_Box"],
-}
+    #st.write(f"Applying filter with terms: {terms} and logic: {logic}, columns: {search_cols}")
+    #return df
+    df_s = df.copy()
+    df_s[search_cols] = df_s[search_cols].astype(str)
 
-rows = []
+    mask = None
+    for term in terms:
+        term_mask = df_s[search_cols].apply(
+            lambda c: c.str.contains(term, case=False, na=False)
+        ).any(axis=1)
+        if mask is None:
+            mask = term_mask
+        elif logic == "AND":
+            mask &= term_mask
+        else:
+            mask |= term_mask
+    return df[mask]
 
-for op in operations:
-    # ค่าเฉพาะของ Operation (เช่น OEE, Yield, Score ฯลฯ) ไม่ใช่ผลรวม Stage
-    op_kpi = np.random.randint(80, 101)  # 80–100
+def TestTime_Hist_block(title, df, groupby_cols=None, expand=False):
+    
+    with st.expander(f"{title}", expanded=expand):
+        #st.write(f"Total Records Original : {len(df)}")
+        c0, c1, c2 = st.columns(3)
+        default_programs = ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT", "TSR"]
+        params = st.query_params
 
-    for stg in stages_by_op[op]:
-        # ค่าเฉพาะของ Stage ไม่ใช่ผลรวม Task
-        stage_kpi = np.random.randint(70, 101)  # 70–100
-
-        for task in tasks_by_stage[stg]:
-            # ค่าระดับ Task (อันนี้จะต่างกันทุกแถว)
-            task_kpi = np.random.randint(50, 101)
-            qty = np.random.randint(10, 200)
-
-            rows.append(
-                {
-                    "Operation": op,
-                    "Stage": stg,
-                    "Task": task,
-                    "Op_KPI": op_kpi,        # ซ้ำกันทุกแถวใน Operation เดียวกัน
-                    "Stage_KPI": stage_kpi,  # ซ้ำกันทุกแถวใน Stage เดียวกัน
-                    "Task_KPI": task_kpi,    # เฉพาะ Task
-                    "Qty": qty,              # ปริมาณ (เอาไว้ sum ได้)
-                }
+        raw_program_params = params.get("program", params.get("product", params.get("PRODUCT", [])))
+        with c0:
+            program_filter = st.multiselect(
+                "Select Product(s)",
+                ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT"],
+                default=default_programs if raw_program_params else []
+            )
+        with c1:
+            filter_text_tt_hist = st.text_input(
+            "Filter Text Box",
+            "",
+            placeholder="Search in all columns...",
+            key="filter_text_tt_hist"
             )
 
-df = pd.DataFrame(rows)
+        with c2:
+            logic_tt_hist = st.radio(
+            "Search Mode",
+            ["OR", "AND"],
+            horizontal=True,
+            key="logic_tt_hist",
+            help="OR: Match any word | AND: Match all words, [col]_null to search for null values"
+        )
+        df_org = df.copy()
+        if program_filter:  # If any programs are selected
+            st.write(f'Product is in { "PRODUCT" in df.columns }')
+            df = df[df['PRODUCT'].isin(program_filter)]
+        else:  # If nothing selected, show all programs
+            df = df_org
 
-st.subheader("Raw Data (ตัวอย่าง)")
-st.dataframe(df, use_container_width=True, height=250)
+        #st.write(f"Total Records Before : {len(df)}")
+        df_f = apply_filter(
+            df,
+            filter_text_tt_hist,
+            logic_tt_hist,
+            
+        )
+        #st.write(f"Total Records After : {len(df_f)}")
 
-# -----------------------------
-# 2) สร้าง GridOptions สำหรับ Hierarchical แสดงใน AgGrid
-# -----------------------------
-gb = GridOptionsBuilder.from_dataframe(df)
 
-# default column config
-gb.configure_default_column(
-    resizable=True,
-    sortable=True,
-    filter=True,
-)
 
-# จัด Hierarchy: Operation > Stage > (แล้วคอลัมน์ Task เป็น leaf)
-gb.configure_column("Operation", rowGroup=True, hide=False)
-gb.configure_column("Stage", rowGroup=True, hide=False)
+        df_f['Link'] = df_f.apply(
+                            lambda row: f"http://10.7.194.231:8501/ttr_Test_Time_Compare_View?prog_0={row['PRODUCT']}&cfg_0={row['MEDIA_FORMAT']}&pco_0={row['GROUP_NAME']}&attr_1=NUM_HEADS&val_1={int(row['NUM_HEADS'])}",
+                            axis=1
+                            )
+        cols = ["Link"] + [col for col in df_f.columns if col not in ["Link",]] 
+        df_f = df_f[cols]
+        st.dataframe(df_f, 
+                     use_container_width=True,
+                     column_config={
+                    "Link": st.column_config.LinkColumn("Open", display_text="View")}, 
+                    height=15*32)
 
-# ค่าเฉพาะของแต่ละระดับ -> ใช้ aggFunc = "first" เพื่อไม่ให้มันเอามาบวก
-gb.configure_column(
-    "Op_KPI",
-    header_name="Op KPI (ไม่ใช่ผลรวม)",
-    type=["numericColumn", "numberColumnFilter"],
-    aggFunc="first",
-    valueFormatter="x != null ? x.toFixed(0) : ''",
-)
 
-gb.configure_column(
-    "Stage_KPI",
-    header_name="Stage KPI (ไม่ใช่ผลรวม)",
-    type=["numericColumn", "numberColumnFilter"],
-    aggFunc="first",
-    valueFormatter="x != null ? x.toFixed(0) : ''",
-)
 
-# ค่า Task_KPI อาจจะดูเป็นค่าเฉลี่ยเวลาระดับบน (แล้วแต่โจทย์)
-gb.configure_column(
-    "Task_KPI",
-    header_name="Task KPI",
-    type=["numericColumn", "numberColumnFilter"],
-    aggFunc="avg",
-    valueFormatter="x != null ? x.toFixed(1) : ''",
-)
+def load_test_time_hist_info():
+    
+    all_data_hist_path = config.TT_HISTORY_PATH
+    group_file = config.GROUP_INFO_FILE_NAME
 
-# Qty = ปริมาณ สามารถ sum ได้ปกติ
-gb.configure_column(
-    "Qty",
-    header_name="Qty (Sum)",
-    type=["numericColumn", "numberColumnFilter"],
-    aggFunc="sum",
-    valueFormatter="x != null ? x.toFixed(0) : ''",
-)
+    if os.path.exists(all_data_hist_path):
+        pass
+        try:
+            _path = os.path.join(all_data_hist_path, group_file)
+            df_hist = pd.DataFrame()
+            
+            for root, dirs, files in os.walk(all_data_hist_path):
+                for file in files:
+                    if group_file in file:
+                        current_folder = os.path.basename(root)
+                        #st.write(f"Loading historical data from {current_folder}...")
+                        file_path = os.path.join(root, file)
+                        df_temp = pd.read_csv(file_path)
+                        df_temp['GROUP_NAME'] = current_folder
 
-# ตั้งค่า column สำหรับ group แสดงเป็น Hierarchy เดียว
-grid_options = gb.build()
-grid_options["autoGroupColumnDef"] = {
-    "headerName": "Hierarchy",
-    "minWidth": 280,
-    "cellRendererParams": {
-        "suppressCount": False,  # ถ้าไม่อยากโชว์จำนวนแถวใน group ให้เปลี่ยนเป็น True
-    },
-}
+                        if 'PRODUCT' not in df_temp.columns:
+                            st.write(f"Warning: 'PRODUCT' column not found in {file_path}. Adding with default value 0.")
+                        try:
+                            df_temp = df_temp.groupby(['PRODUCT','GROUP_NAME', 'CMS_CONFIG', 'MEDIA_FORMAT', 'OPERATION', 'SUB_BUILD_GROUP', 'NUM_HEADS']).size().reset_index(name='count')
+                        except Exception as e:
+                            continue
+                            st.error(f"Error grouping data: {e}")
+                        
+                        df_hist = pd.concat([df_hist, df_temp], ignore_index=True)
+            
+            
+            # df_hist = (df_hist.groupby()["OPERATION"]
+            #         .agg(lambda s: ", ".join(s.astype(str)))
+            #         .reset_index())
 
-gb.configure_grid_options(
-                groupDisplayType="multipleColumns",  # show group columns instead of hiding
-                groupDefaultExpanded=0,              # 0 = collapsed, -1 = fully expanded
-                animateRows=True,
-                suppressAggFuncInHeader=False,
-            )
+            df_hist = (df_hist.assign(OP_CNT=df_hist["OPERATION"].astype(str) + "-" + df_hist["count"].astype(int).astype(str))
+                    .groupby(['PRODUCT','GROUP_NAME', 'CMS_CONFIG', 'MEDIA_FORMAT', 'SUB_BUILD_GROUP', 'NUM_HEADS'], as_index=False)
+                    .agg({"count": "sum","OP_CNT": lambda s: ", ".join(s)})
+                    .rename(columns={"count": "TOTAL_COUNT","OP_CNT": "OPERATION"}))
 
-st.subheader("Ag-Grid Hierarchical View")
-auto_size_js = JsCode("""
-function(e) {
-    let gridApi = e.api;
-    gridApi.sizeColumnsToFit();
-}
-""")
-grid_response = AgGrid(
-    df,
-    gridOptions=grid_options,
-    enable_enterprise_modules=True,
-    update_mode=GridUpdateMode.NO_UPDATE,
-    fit_columns_on_grid_load=False,
-    height=19*32,
 
-    allow_unsafe_jscode=True,
-    custom_js=[
-        JsCode("""
-        function(e) {
-            e.api.sizeColumnsToFit();
-            e.api.gridOptions.api.gridOptionsWrapper.gridOptions.enableRangeSelection = true;
-            e.api.gridOptions.api.gridOptionsWrapper.gridOptions.enableClipboard = true;
-        }
-        """)
-    ],
-    enableRangeSelection=True,
-    enableRowSelection=True,
-    rowSelection='multiple',
-    suppressRowClickSelection=False,
+            return df_hist
+        except Exception as e:
+            st.error(f"Error loading historical data: {e}")
 
-)
+    else:
+        st.info(f"No historical test time data found ")
+        return pd.DataFrame()
+
+
+
+#if st.button("Load DataFrame"):
+
+source_df = load_test_time_hist_info()
+
+#st.write(f"Loaded historical data with {len(source_df)} records.")
+
+TestTime_Hist_block("Test Time Hist", source_df, expand=True)        
