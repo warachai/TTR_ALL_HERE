@@ -19,23 +19,36 @@ RAW_DISC_DIR = os.path.join(RAW_DIR, 'DISC')
 RAW_JIRA_DIR = os.path.join(RAW_DIR, 'JIRA')
 RAW_EXCEL_DIR = os.path.join(RAW_DIR, 'EXCEL')
 
+QUERY_REQUEST_LOG_FILE = os.path.join(RAW_DIR, 'data_request_log.txt')
+QUERY_REQUEST_LOG_FILE_HISTORY = os.path.join(RAW_DIR, 'data_request_log_history.csv')
+QUERY_REQUEST_LOG_FILE_HISTORY_HEADER = ["User", "DateTime", "Product", 'MEDIA_FORMAT', 'NUM_HEADS', 'SBR', 'SAVE_NAME', 'DESCRIPTION', 'REQUEST_STRING']
 
+TTR_ATTR_WEB_FILTER_LIST = ['CMS_CONFIG', 'CAPACITY', 'NUM_HEADS', 'PN3', 'IR_DRIVE', 'POWER_LOSS_DRIVE', 'WAFER_TYPE', 'HGA_SORT_06', 'CAL2_FPW']
 
 # Output directories
 OUTPUT_RAW_DIR = RAW_DIR
 OUTPUT_MASTER_DIR = os.path.join(BASE_DIR, 'MASTER')
 
-
+MAX_QUERY_QTY = 15000
 # ==============================================================================
 # FILE NAMES
 # ==============================================================================
 JIRA_FILE_NAME = 'jira_issues.csv'
 MERGED_OUTPUT_FILE_NAME = 'merged_issues.csv'
-EXCEL_FILE_NAME = "TTR list review Q1'26 (8).xlsx"
+EXCEL_FILE_NAME = "TTR list review Q1'26 (11).xlsx"
+
+EXCEL_FILE_NAME_DORADO = "TTR FY26 Dorado - Master FW2622.xlsx"
+
 
 STAGING_FILE_NAME = 'task_staging.csv'
 LATEST_FILE_NAME = 'task_latest.csv'
 TTR_ITEM_MASTER_FILE_NAME = 'ttr_item_master.csv'
+GROUP_INFO_FILE_NAME = 'DRV_INV.csv'
+
+PARQUET_MODE = True
+
+TT_HISTORY_PATH = r"R:\Test_Time_Hist"
+TT_HISTORY_PATH_parquet = r"R:\Test_Time_Hist_pqt"
 # ==============================================================================
 # FULL FILE PATHS
 # ==============================================================================
@@ -67,6 +80,13 @@ PROGRAM_NAME_MAP = {
     'DORADO': 'DORADO'
 }
 
+PROGRAM_SHORT_NAME_MAP = {
+    'MBP': 'MARLIN BP',
+    'ML': 'MARLIN',
+    'SU': 'SUMMIT',
+    'DR': 'DORADO'
+}
+
 
 # ==============================================================================
 # EXCEL SHEET CONFIGURATIONS
@@ -74,7 +94,7 @@ PROGRAM_NAME_MAP = {
 # Configuration for each Excel sheet to import
 EXCEL_SHEETS_CONFIG = [
     {
-        'sheet': 'MarlinBP FW2620 working',
+        'sheet': 'MarlinBP FW2622 working',
         'column_map': {
             'G': 'Task_ID',
             'H': 'Status',
@@ -87,7 +107,7 @@ EXCEL_SHEETS_CONFIG = [
         'start_row': 78
     },
     {
-        'sheet': 'Marlin WW21',
+        'sheet': 'Marlin WW22',
         'column_map': {
             'H': 'Task_ID',
             'I': 'Status',
@@ -100,7 +120,7 @@ EXCEL_SHEETS_CONFIG = [
         'start_row': 66
     },
     {
-        'sheet': 'Summit FW2614-20',
+        'sheet': 'Summit FW2614-21',
         'column_map': {
             'J': 'Task_ID',
             'K': 'Status',
@@ -113,7 +133,7 @@ EXCEL_SHEETS_CONFIG = [
         'start_row': 39
     },
     {
-        'sheet': 'Dorado WW18 Working',
+        'sheet': 'Dorado WW19 Working',
         'column_map': {
             'E': 'Task_ID',
             'F': 'Status',
@@ -218,18 +238,25 @@ PRODUCT_FEATURE_FILE_PATH   = os.path.join(MASTER_FILE_DIR, "product_feature.csv
 # ==============================================================================
 def get_excel_files_config():
     """
-    Get the complete Excel files configuration with file path.
-    
+    Get Excel sheet configurations grouped by product/program.
+
     Returns:
-        list: List of Excel file configurations
+        dict: Mapping of program name to list of sheet configs (with file path)
     """
-    return [
-        {
-            'file': EXCEL_FILE_PATH,
+    config_by_product = {}
+    for config in EXCEL_SHEETS_CONFIG:
+        program = config.get('program_name')
+        # Use EXCEL_FILE_NAME_DORADO for Dorado program
+        if program == 'DORADO':
+            file_path = os.path.join(RAW_EXCEL_DIR, EXCEL_FILE_NAME_DORADO)
+        else:
+            file_path = EXCEL_FILE_PATH
+        entry = {
+            'file': file_path,
             **config
         }
-        for config in EXCEL_SHEETS_CONFIG
-    ]
+        config_by_product.setdefault(program, []).append(entry)
+    return config_by_product
 
 
 def create_directories():
