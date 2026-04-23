@@ -1403,8 +1403,8 @@ with st.expander("Test Time Distribution", expanded=False):
                 "SN": SN,
                 "TS": TS,
                 "OPER": OPER,
-                "Test Time": Test_Time,
-                "Group_Name": Group_Name
+                "Group_Name": Group_Name,
+                "Test Time": Test_Time                
                 })
 
             violin_points_df = pd.DataFrame(violin_points_data)
@@ -1784,14 +1784,17 @@ with st.expander("Test Time By State", expanded=False):
                     SN = pt.get("customdata", [None, None])[0]
                     TS = pt.get("customdata", [None, None])[1]
                     OPER = pt.get("x")
+                    OPER2 = pt.get("x")
                     Test_Time = pt.get("y")
                     Group_Name = pt.get("legendgroup")
                     violin_points_data.append({
                     "SN": SN,
                     "TS": TS,
-                    color_arg: OPER,
-                    "Test Time": Test_Time,
-                    "Group_Name": Group_Name
+                    f"{color_arg}_1": OPER.split(" - ")[0] if " - " in OPER else OPER,  # extract state name if OP_STATE format
+                    "Group_Name": Group_Name,                    
+                    f"{color_arg}_2": OPER.split(" - ")[1] if " - " in OPER else OPER,  # extract state name if OP_STATE format                    
+                    "Test Time": Test_Time
+
                     })
                 violin_points_df = pd.DataFrame(violin_points_data)
                 # Set fixed width for columns in violin_points_df display
