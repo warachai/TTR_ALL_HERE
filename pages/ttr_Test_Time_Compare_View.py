@@ -29,6 +29,7 @@ st.set_page_config(page_title="Test Time View", layout="wide")
 
 
 test_time_folder = config.TT_HISTORY_PATH
+test_group_folder = config.TT_SUMMARY_CSV
 def getPCOColumnOrder():
     selected = {}
     #pco_selected = {}
@@ -1641,6 +1642,7 @@ with st.expander("Test Time By State", expanded=False):
 
         plot_graph = st.checkbox("Plot Graph", value=False)
 
+
         # Use filtered data if available
         if not df_state.empty and len(df_state) < 2500 and plot_graph:
             st.write(f"Generating distribution chart for {len(df_state)} rows.")
@@ -1809,6 +1811,121 @@ with st.expander("Test Time By State", expanded=False):
                 st.dataframe(violin_points_df, use_container_width=False, column_config=col_widths, height=8*32, hide_index=True)
         else:
             st.info("No filtered data available. Query data above to view distribution.")
+    
+        with st.expander("Test Time By Category", expanded=False):    # Test Time By Category
+            # Copy df_state 
+            df_raw_state = df_state.copy()
+
+
+            df_raw_state = df_raw_state.pivot_table(
+                index=["OPERATION", "STATE_NAME", "GROUP_NAME", "OPER_CNT"],
+                aggfunc={"TestTime(hrs)": "mean", "SERIAL_NUM": "size"},
+            ).reset_index() 
+
+            # force to weighted 
+            if avg_mode == "Weighted":
+                df_raw_state['TestTime(hrs)'] = (df_raw_state['TestTime(hrs)']  * df_raw_state['SERIAL_NUM']) / df_raw_state['OPER_CNT'].replace(0, np.nan)  # avoid division by zero
+            
+            # st.write(df_raw_state)
+            st.write(test_group_folder)
+
+            df_dorado_all_state = pd.read_csv(test_group_folder)
+            join_test_group_result = pd.merge(df_raw_state, df_dorado_all_state, on=['OPERATION' , 'STATE_NAME'], how='left')
+            join_test_group_result['Test Group'] = join_test_group_result['Test Group'].fillna('UNKNOW')
+
+
+            st.write(f"Raw State {len(df_raw_state.index)} row, Dorado All State {len(df_dorado_all_state)} row, Raw State After Join {len(join_test_group_result)} row.")
+
+            # st.write(df_dorado_all_state)
+            # st.write(join_test_group_result)
+
+            # join_test_group_result = join_test_group_result.pivot_table(
+            #     index=[ "Test Group" ],
+            #     columns=["GROUP_NAME",],
+            #     values=["TestTime(hrs)", "STATE_NAME"],
+            #     aggfunc={"TestTime(hrs)": "sum", "STATE_NAME": "size"},
+            #     fill_value=0
+            # ).reset_index()
+            # st.write(join_test_group_result)
+
+            
+            df_tt_by_category = join_test_group_result.pivot_table(
+                index=["Test Group"],
+                columns=["GROUP_NAME"],
+                values=["TestTime(hrs)", "STATE_NAME"],
+                aggfunc={"TestTime(hrs)": "sum", "STATE_NAME": "size"},
+                fill_value=0,
+                sort=False
+            )
+
+
+
+            chart_ttbc = df_tt_by_category.copy()
+
+            metrics = list(dict.fromkeys(df_tt_by_category.columns.get_level_values(0)))
+            groups  = list(dict.fromkeys(df_tt_by_category.columns.get_level_values(1)))
+
+            for m in metrics:
+                df_tt_by_category[(m, "sum")] = df_tt_by_category[m].sum(axis=1)
+
+            base_groups = [g for g in groups if g != "sum"]
+            swapped_groups = base_groups[::-1]
+
+            metric_order = ["TestTime(hrs)", "STATE_NAME"]
+
+            new_cols = []
+            for m in metric_order:
+                for g in swapped_groups:
+                    new_cols.append((m, g))
+                new_cols.append((m, "sum"))
+
+            df_tt_by_category = df_tt_by_category.reindex(columns=pd.MultiIndex.from_tuples(new_cols))
+            df_tt_by_category.loc["Total"] = df_tt_by_category.sum()
+            df_tt_by_category = df_tt_by_category.reset_index()
+            st.write(df_tt_by_category)
+
+            # Download Data After join
+            df_tt_by_category_csv = df_tt_by_category.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Download Data as CSV",
+                data=df_tt_by_category_csv,
+                file_name="df_tt_by_category.csv",
+                mime="text/csv",
+                key="df_tt_by_category_download_btn"
+            )
+
+            plot_graph_ttbc = st.checkbox("Plot Graph Test Time By Category", value=False)
+
+            if plot_graph_ttbc:
+            
+                groups_order = swapped_groups
+                x_order = list(chart_ttbc.index)
+
+                # bar chart TestTime(hrs)
+                df_tt = (chart_ttbc["TestTime(hrs)"].reset_index().melt(id_vars="Test Group", var_name="GROUP_NAME", value_name="TestTime(hrs)"))
+
+                fig_tt = px.bar(
+                    df_tt,
+                    x="Test Group", y="TestTime(hrs)",
+                    color="GROUP_NAME",
+                    barmode="group",
+                    category_orders={"GROUP_NAME": groups_order, "Test Group": x_order},
+                    title="TestTime(hrs) by Test Group and GROUP_NAME"
+                )
+                st.plotly_chart(fig_tt, use_container_width=True)
+
+                # # bar chart STATE_NAME
+                # df_sn = (chart_ttbc["STATE_NAME"].reset_index().melt(id_vars="Test Group", var_name="GROUP_NAME", value_name="STATE_NAME"))
+
+                # fig_sn = px.bar(
+                #     df_sn,
+                #     x="Test Group", y="STATE_NAME",
+                #     color="GROUP_NAME",
+                #     barmode="group",
+                #     category_orders={"GROUP_NAME": groups_order, "Test Group": x_order},
+                #     title="STATE_NAME (count) by Test Group and GROUP_NAME"
+                # )
+                # st.plotly_chart(fig_sn, use_container_width=True)
 
 with st.expander("Test Time By Test", expanded=False):
     st.markdown('<div class="section-title">Test Time By Test</div>', unsafe_allow_html=True)
