@@ -248,7 +248,94 @@ def load_merged_test_time_by_test():
             "TEST_TIME": [10, 12, 20, 16, 9, 11, 14, 13, 8, 10, 15, 18],
         }
         return pd.DataFrame(data)
-  
+
+# -------------------------------------------------------------------
+# Load and merge all DRV_INV.csv files from folder hierarchy
+# -------------------------------------------------------------------
+def load_merged_max_cyl():
+    """
+    """
+    dfs = []
+
+    source_file = "P172_MAX_CYL_VBAR@FNC2.csv"
+
+    # Print user selected config for debugging
+    # Collect selected values into a dict for easier access
+    # Build selected map from current URL/query parameter defaults instead of session state
+    # so it reflects the user's explicit selections (user settings) rather than transient session values.
+    selected = {}
+    params_local = st.query_params  # safe to call here; independent of later parsing
+    for idx in range(2):
+        prog_raw = params_local.get(f"prog_{idx}", "NONE")
+        cfg_raw = params_local.get(f"cfg_{idx}", "NONE")
+        pco_raw = params_local.get(f"pco_{idx}", "NONE")
+        # Handle list values (Streamlit may store as list) and normalize
+        def _norm(v):
+            if isinstance(v, list):
+                return v[0] if v else "NONE"
+            return v if isinstance(v, str) else "NONE"
+        selected[idx] = {
+            "program": _norm(prog_raw),
+            "config": _norm(cfg_raw),
+            "pco": _norm(pco_raw),
+        }
+
+    # Example: Check if path exists for each selected slot
+    user_selected = []
+    for idx, sel in selected.items():
+        prog, cfg, pco = sel["program"], sel["config"], sel["pco"]
+        if prog != "NONE" and cfg != "NONE" and pco != "NONE":
+            path = os.path.join(test_time_folder, prog, cfg, pco, source_file)
+            if path not in user_selected:
+                user_selected.append(path)
+            #st.write("path :",path)
+
+
+    for root, dirs, files in os.walk(test_time_folder):
+        if source_file in files:
+            filepath = os.path.join(root, source_file)
+            
+            # Extract hierarchy from path: R:\Test_Time_Hist\{program}\{config}\{pco}\DRV_INV.csv
+            rel_path = os.path.relpath(filepath, test_time_folder)
+            parts = rel_path.split(os.sep)
+
+
+            
+            if filepath in user_selected:  # program/config/pco/filename
+                try:
+                    df = pd.read_csv(filepath)
+                    # Add the three hierarchy columns at the front
+                    df.insert(0, "program", parts[0])
+                    df.insert(1, "config", parts[1])
+                    df.insert(2, "pco", parts[2])
+                    
+                    # Map DRV_INV columns to filter-compatible names
+                    # Use OPERATION as Category, SUB_BUILD_GROUP as SubCat for filtering
+                    if "OPERATION" in df.columns:
+                        df["Category"] = df["OPERATION"]
+                    if "SUB_BUILD_GROUP" in df.columns:
+                        df["SubCat"] = df["SUB_BUILD_GROUP"]
+                    
+                    dfs.append(df)
+                except Exception as e:
+                    st.warning(f"Could not load {filepath}: {e}")
+    
+    if dfs:
+        merged_df = pd.concat(dfs, ignore_index=True)
+        return merged_df
+    else:
+        # Fallback to example data if no DRV_INV.csv files found
+        #st.warning("No DRV_INV.csv files found. Using example data.")
+        data = {
+            "program":  ["SUMMIT"] * 4 + ["MARLIN"] * 4 + ["MARLIN"] * 4,
+            "config":   ["CMR"] * 4 + ["SMR"] * 4 + ["HSMR"] * 4,
+            "pco":      ["PYTHON_373"] * 4 + ["PCO2"] * 4 + ["PCO3"] * 4,
+            "Category": ["CatA", "CatB", "CatC", "CatA"] * 3,
+            "SubCat":   ["SC1", "SC2", "SC3", "SC4"] * 3,
+            "TEST_TIME": [10, 12, 20, 16, 9, 11, 14, 13, 8, 10, 15, 18],
+        }
+        return pd.DataFrame(data)
+      
 # -------------------------------------------------------------------
 # Load and merge all DRV_INV.csv files from folder hierarchy
 # -------------------------------------------------------------------
@@ -989,6 +1076,51 @@ def test_time_block(title, df, key_prefix, groupby_cols=None, group_by=None):
         mime="text/csv",
         key=f"{key_prefix}_download_btn"
     )
+
+    with st.expander("Track Info", expanded=False):
+
+        df_cyl_data =  load_merged_max_cyl()
+
+        # Plot MAX_CYL_DEC by STATE_NAME and GROUP_NAME
+        if not df_cyl_data.empty and "MAX_CYL_DEC" in df_cyl_data.columns:
+            df_cyl_plot = df_cyl_data.copy()
+            
+            # Ensure numeric MAX_CYL_DEC
+            df_cyl_plot['MAX_CYL_DEC'] = pd.to_numeric(df_cyl_plot['MAX_CYL_DEC'], errors='coerce')
+            df_cyl_plot = df_cyl_plot.dropna(subset=['MAX_CYL_DEC'])
+            
+            if not df_cyl_plot.empty:
+                # Display mean for each group
+                group_means = df_cyl_plot.groupby(["GROUP_NAME", "STATE_NAME"])["MAX_CYL_DEC"].mean().sort_values(ascending=False)
+                st.subheader("Mean MAX_CYL_DEC by Group")
+                
+                group_means_pivot = group_means.reset_index().pivot(index="STATE_NAME", columns="GROUP_NAME", values="MAX_CYL_DEC")
+
+                # Add ratio column
+                if len(group_means_pivot.columns) >= 2:
+                    #st.write("columns for ratio:", group_means_pivot.columns.tolist())
+                    g0_col = group_means_pivot.columns[0]
+                    g1_col = group_means_pivot.columns[1]
+                    group_means_pivot['Ratio%'] = (group_means_pivot[g0_col] - group_means_pivot[g1_col]) / group_means_pivot[g1_col] * 100
+                
+                st.dataframe(group_means_pivot, use_container_width=True)
+                
+                fig_cyl = px.box(
+                    df_cyl_plot,
+                    x="STATE_NAME",
+                    y="MAX_CYL_DEC",
+                    color="GROUP_NAME",
+                    hover_data=["program", "config", "pco"],
+                    title="MAX_CYL_DEC by State and Group"
+                )
+                fig_cyl.update_layout(
+                    yaxis_title="MAX_CYL_DEC",
+                    xaxis_title="State Name",
+                    margin=dict(l=10, r=10, t=40, b=10)
+                )
+                st.plotly_chart(fig_cyl, use_container_width=True)
+
+        pass
 
     return select_col
 
@@ -1816,16 +1948,20 @@ with st.expander("Test Time By State", expanded=False):
             # Copy df_state 
             df_raw_state = df_state.copy()
 
+            if "OPER_CNT" in df_raw_state.columns:
+                df_raw_state = df_raw_state.pivot_table(
+                    index=["OPERATION", "STATE_NAME", "GROUP_NAME", "OPER_CNT"],
+                    aggfunc={"TestTime(hrs)": "mean", "SERIAL_NUM": "size"},
+                ).reset_index() 
 
-            df_raw_state = df_raw_state.pivot_table(
-                index=["OPERATION", "STATE_NAME", "GROUP_NAME", "OPER_CNT"],
-                aggfunc={"TestTime(hrs)": "mean", "SERIAL_NUM": "size"},
-            ).reset_index() 
-
-            # force to weighted 
-            if avg_mode == "Weighted":
-                df_raw_state['TestTime(hrs)'] = (df_raw_state['TestTime(hrs)']  * df_raw_state['SERIAL_NUM']) / df_raw_state['OPER_CNT'].replace(0, np.nan)  # avoid division by zero
-            
+                # force to weighted 
+                if avg_mode == "Weighted":
+                    df_raw_state['TestTime(hrs)'] = (df_raw_state['TestTime(hrs)']  * df_raw_state['SERIAL_NUM']) / df_raw_state['OPER_CNT'].replace(0, np.nan)  # avoid division by zero
+            else:
+                df_raw_state = df_raw_state.pivot_table(
+                    index=["OPERATION", "STATE_NAME", "GROUP_NAME"],
+                    aggfunc={"TestTime(hrs)": "mean", "SERIAL_NUM": "size"},
+                ).reset_index()
             # st.write(df_raw_state)
             st.write(test_group_folder)
 
