@@ -19,6 +19,7 @@ from st_aggrid.shared import JsCode
 import config
 import plotly.graph_objects as go
 import re
+import ast
 
 from bokeh.models.widgets import Button
 from bokeh.models import CustomJS
@@ -30,6 +31,7 @@ st.set_page_config(page_title="Test Time View", layout="wide")
 
 test_time_folder = config.TT_HISTORY_PATH
 test_group_folder = config.TT_SUMMARY_CSV
+test_time_by_test = config.TT_BY_TEST
 def getPCOColumnOrder():
     selected = {}
     #pco_selected = {}
@@ -248,6 +250,87 @@ def load_merged_test_time_by_test():
             "TEST_TIME": [10, 12, 20, 16, 9, 11, 14, 13, 8, 10, 15, 18],
         }
         return pd.DataFrame(data)
+
+# -------------------------------------------------------------------
+# Load and merge all test_parameter_info.csv files from folder hierarchy
+# -------------------------------------------------------------------
+def load_merged_test_time_by_test_parm():
+    """
+    Recursively find all test_parameter_info.csv files in test_time_folder.
+    Read each file and add program, config, pco columns based on folder path.
+    Map DRV_INV columns to filter-compatible names.
+    Merge all into single dataframe.
+    """
+    dfs = []
+
+    source_file = "test_parameter_info.csv"
+
+    # Print user selected config for debugging
+    # Collect selected values into a dict for easier access
+    # Build selected map from current URL/query parameter defaults instead of session state
+    # so it reflects the user's explicit selections (user settings) rather than transient session values.
+    selected = {}
+    params_local = st.query_params  # safe to call here; independent of later parsing
+    for idx in range(2):
+        prog_raw = params_local.get(f"prog_{idx}", "NONE")
+        cfg_raw = params_local.get(f"cfg_{idx}", "NONE")
+        pco_raw = params_local.get(f"pco_{idx}", "NONE")
+        # Handle list values (Streamlit may store as list) and normalize
+        def _norm(v):
+            if isinstance(v, list):
+                return v[0] if v else "NONE"
+            return v if isinstance(v, str) else "NONE"
+        selected[idx] = {
+            "program": _norm(prog_raw),
+            "config": _norm(cfg_raw),
+            "pco": _norm(pco_raw),
+        }
+
+    # Example: Check if path exists for each selected slot
+    user_selected = []
+    for idx, sel in selected.items():
+        prog, cfg, pco = sel["program"], sel["config"], sel["pco"]
+        if prog != "NONE" and cfg != "NONE" and pco != "NONE":
+            path = os.path.join(test_time_folder, prog, cfg, pco, source_file)
+            if path not in user_selected:
+                user_selected.append(path)
+            #st.write("path :",path)
+
+    count_loaded = 0
+    for root, dirs, files in os.walk(test_time_folder):
+        if source_file in files:
+            filepath = os.path.join(root, source_file)
+            
+            # Extract hierarchy from path: R:\Test_Time_Hist\{program}\{config}\{pco}\DRV_INV.csv
+            rel_path = os.path.relpath(filepath, test_time_folder)
+            parts = rel_path.split(os.sep)
+            
+            if filepath in user_selected:  # program/config/pco/filename
+                try:
+                    df = pd.read_csv(filepath)
+                    # Add the three hierarchy columns at the front
+                    df.insert(0, "program", str(count_loaded) + parts[0])
+                    df.insert(1, "config", parts[1])
+                    df.insert(2, "pco", parts[2])
+                    
+                    # Map DRV_INV columns to filter-compatible names
+                    # Use OPERATION as Category, SUB_BUILD_GROUP as SubCat for filtering
+                    if "OPERATION" in df.columns:
+                        df["Category"] = df["OPERATION"]
+                    if "SUB_BUILD_GROUP" in df.columns:
+                        df["SubCat"] = df["SUB_BUILD_GROUP"]
+                    
+                    dfs.append(df)
+                except Exception as e:
+                    st.warning(f"Could not load {filepath}: {e}")
+        count_loaded += 1
+    
+    if dfs:
+        merged_df = pd.concat(dfs, ignore_index=True)
+        return merged_df
+    else:
+        #return empty dataframe if no files found, so caller can handle "no data" case separately from "data with zero rows"
+        return pd.DataFrame()
 
 # -------------------------------------------------------------------
 # Load and merge all DRV_INV.csv files from folder hierarchy
@@ -2063,7 +2146,7 @@ with st.expander("Test Time By State", expanded=False):
                 # )
                 # st.plotly_chart(fig_sn, use_container_width=True)
 
-with st.expander("Test Time By Test", expanded=False):
+with st.expander("Test Time By Test org", expanded=False):
     st.markdown('<div class="section-title">Test Time By Test</div>', unsafe_allow_html=True)
 
     if not has_query_params:
@@ -2365,5 +2448,373 @@ def load_test_time_hist_info():
     else:
         st.info(f"No historical test time data found at {hist_fil}")
         return pd.DataFrame()
+    
+
+
+
+def extract_dict_from_test_parameters(tp) -> dict:
+    if tp is None or (isinstance(tp, float) and np.isnan(tp)):
+        return {}
+
+    if isinstance(tp, dict):
+        return tp
+
+    if isinstance(tp, (list, tuple)):
+        for x in tp:
+            if isinstance(x, dict):
+                return x
+        return {}
+
+    if isinstance(tp, str):
+        m = re.search(r"\{.*?\}", tp, flags=re.DOTALL)  # non-greedy
+        if not m:
+            return {}
+        try:
+            return ast.literal_eval(m.group(0))
+        except Exception:
+            return {}
+
+    return {}
+
+
+def build_compare_table(d1: dict, d2: dict, name1: str, name2: str, tt1: str, tt2: str) -> pd.DataFrame:
+    df_test_time = pd.DataFrame({
+        "PARAMETERS": ["TEST_TIME_HR"],
+        name1: [tt1],
+        name2: [tt2],
+    })
+    keys = sorted(set(d1.keys()) | set(d2.keys()))
+    df_parameters = pd.DataFrame({
+        "PARAMETERS": keys,
+        name1: [d1.get(k, None) for k in keys],
+        name2: [d2.get(k, None) for k in keys],
+    })
+    df = pd.concat([df_test_time, df_parameters], ignore_index=True)
+    return df
+
+
+def build_ttp_table(d1: dict, name1: str, tt1: str) -> pd.DataFrame:
+    df_test_time = pd.DataFrame({
+        "PARAMETERS": ["TEST_TIME_HR"],
+        name1: [tt1],
+    })
+    keys = sorted(set(d1.keys()))
+    df_parameters = pd.DataFrame({
+        "PARAMETERS": keys,
+        name1: [d1.get(k, None) for k in keys],
+    })
+    df = pd.concat([df_test_time, df_parameters], ignore_index=True)
+    return df
+
+
+with st.expander("Test Time By Test Parameter", expanded=False):
+    st.markdown('<div class="section-title">Test Time By Test Parameter</div>', unsafe_allow_html=True)
+
+    # if not has_query_params:
+    # force condition
+    df_test_parameter = load_merged_test_time_by_test_parm().copy()
+    st.write(f"Total rows before filter: {len(df_test_parameter)}")
+    if df_test_parameter.empty:
+        st.info("No data available. Please run query to load data.")
+    else:
+
+        c1_tt, c2_tt, c3_tt = st.columns(3)
+        col_alias = {
+            "STATE": "STATE_NAME",
+            "OP": "OPERATION",
+            "PARM": "PARAMETER_NAME",
+            "TEST": "TEST_NUMBER",
+        }
+        with c1_tt:
+            filter_text_tt_op_tt_detail = st.text_input(
+            "Filter Text Box",
+            "",
+            placeholder="Search in all columns...",
+            help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP TEST:275\n- [STATE:STATE_NAME, OP:OPERATION, PARM:PARAMETER_NAME, TEST:TEST_NUMBER]",
+            key="filter_text_tt_op_tt_detail"
+            )
+
+            
+        with c2_tt:
+            logic_tt_op_tt_detail = st.radio(
+            "Search Mode",
+            ["AND","OR"],
+            horizontal=True,
+            help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
+            key="logic_tt_op_tt_detail"
+            )
+
+        df_test = apply_filter_flex(
+            df_test_parameter,
+            filter_text_tt_op_tt_detail,
+            logic_tt_op_tt_detail,
+            [ "OPERATION", "STATE_NAME", 'TEST_NUMBER', 'PARAMETER_NAME', 'SPC_ID'],
+            col_alias=col_alias
+        )
+
+        with c3_tt:
+            st.success(f"Filtered rows: {len(df_test)}")
+
+        if len(df_test) > 3000:
+            st.warning("Too many rows after filtering. Please refine your filter to less than 3000 rows for better performance.")
+            st.stop()
+        
+        KEY_COLS = ["OPERATION", "STATE_NAME", "PARAMETER_NAME", "TEST_NUMBER", "SPC_ID"]
+        SHOW_COLS = ["check","STATE_NAME", "PARAMETER_NAME", "SPC_ID" ,"TEST_TIME_HR" ,"TEST_PARAMETERS"]
+
+        def flatten_columns(df: pd.DataFrame) -> pd.DataFrame:
+            if isinstance(df.columns, pd.MultiIndex):
+                df = df.copy()
+                df.columns = [
+                    "_".join([str(x) for x in col if x not in (None, "", "nan")]).strip("_")
+                    for col in df.columns
+                ]
+            return df
+
+        if not df_test.empty:
+            
+
+            df_test_parameter_full_data = df_test.copy()
+
+            df_test_parameter_pivot = df_test.pivot_table(
+                index=KEY_COLS,
+                columns=["GROUP_NAME"],
+                values=[ "TEST_TIME_HR","TEST_PARAMETERS"],
+                aggfunc={"TEST_TIME_HR": "sum", "TEST_PARAMETERS": "size"},
+                fill_value=0
+            ).reset_index()
+
+            df_pivot_show = flatten_columns(df_test_parameter_pivot)
+
+            # =========================== ORDER GROUP NAME BY COPILOT ======================
+            value_cols = [c for c in df_pivot_show.columns if c not in KEY_COLS]
+            groups = sorted(set("_".join(c.split("_")[2:]) for c in value_cols))
+            ordered_cols = []
+            for g in groups:
+                tp = f"TEST_PARAMETERS_{g}"
+                tt = f"TEST_TIME_HR_{g}"
+                if tp in value_cols:
+                    ordered_cols.append(tp)
+                if tt in value_cols:
+                    ordered_cols.append(tt)
+            # final column order
+            df_pivot_show = df_pivot_show[KEY_COLS + ordered_cols]
+            # ==============================================================================
+
+
+            # checkbox
+            df_select = df_pivot_show.copy()
+            if "check" not in df_select.columns:
+                df_select.insert(0, "check", False)
+
+            edited = st.data_editor(
+                df_select,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "check": st.column_config.CheckboxColumn(
+                        "check",
+                        help="select rows for compare parameter.",
+                        default=False,
+                    )
+                },
+                disabled=[c for c in df_select.columns if c != "check"],
+                key="pivot_selector",
+            )
+
+            # filter only check rows
+            selected_rows = edited[edited["check"] == True]
+
+            st.write(f"Selected {len(selected_rows)} rows.")
+
+            if selected_rows.empty:
+                st.info("Please select row.")
+            else:
+                # remove duplicates rows
+                selected_keys = selected_rows[KEY_COLS].drop_duplicates()
+
+                filtered_full = df_test_parameter_full_data.merge(
+                    selected_keys,
+                    on=KEY_COLS,
+                    how="inner"
+                )
+
+                # debug
+                # st.write(selected_keys)
+                # st.write(filtered_full)
+
+                if "check" not in filtered_full.columns:
+                    filtered_full.insert(0, "check", False)
+
+
+                # GROUP_NAME
+                if "GROUP_NAME" not in filtered_full.columns:
+                    st.warning("Can not find columns GROUP_NAME in dataframe.")
+                    st.dataframe(filtered_full, width="stretch")
+                else:
+                    groups = list(filtered_full["GROUP_NAME"].dropna().unique())
+
+                    if len(groups) == 0:
+                        st.warning("No GROUP_NAME")
+                        st.dataframe(filtered_full, width="stretch")
+
+                    elif len(groups) == 1:
+                        st.subheader(f"Group: {groups[0]}")
+                        # st.dataframe(
+                        #     filtered_full[filtered_full["GROUP_NAME"] == groups[0]],
+                        #     width="stretch"
+                        # )
+                        edited_parameter1 = st.data_editor(
+                            filtered_full[filtered_full["GROUP_NAME"] == groups[0]][SHOW_COLS],
+                            width="stretch",
+                            hide_index=True,
+                            column_config={
+                                "check": st.column_config.CheckboxColumn(
+                                    "check",
+                                    help="select row for compare parameter.",
+                                    default=False,
+                                )
+                            },
+                            key="parameter1_selector",
+                        )
+
+                        sel1 = edited_parameter1[edited_parameter1["check"] == True]
+
+                        if sel1.empty:
+                            st.info("Please select at least one row.")
+                        else:
+                            tp1 = sel1.iloc[0]["TEST_PARAMETERS"]
+                            tt1 = sel1.iloc[0]["TEST_TIME_HR"]
+                            d1 = extract_dict_from_test_parameters(tp1)
+                            df_parameter_table = build_ttp_table(d1, groups[0], tt1)
+                            st.markdown("## Parameter Compare Table")
+                            st.dataframe(df_parameter_table, width="stretch")
+
+                    else:
+                        if len(groups) == 2:
+                            g1, g2 = groups[0], groups[1]
+                            col1, col2 = st.columns(2)
+
+                            df_g1 = filtered_full[filtered_full["GROUP_NAME"] == g1][SHOW_COLS].copy()
+                            df_g2 = filtered_full[filtered_full["GROUP_NAME"] == g2][SHOW_COLS].copy()
+
+                            
+                            # if "check" not in df_g1.columns:
+                            #     df_g1.insert(0, "check", False)
+                            # if "check" not in df_g2.columns:
+                            #     df_g2.insert(0, "check", False)
+
+                            # auto select if df_g1 and df_g2 have a row.
+                            default_value = len(df_g1) == 1 and len(df_g2) == 1
+
+                            df_g1 = df_g1.assign(check=default_value)
+                            df_g2 = df_g2.assign(check=default_value)
+
+                            with col1:
+                                st.markdown(f"### {g1}")
+                                edited_parameter1 = st.data_editor(
+                                    df_g1,
+                                    width="stretch",
+                                    hide_index=True,
+                                    column_config={
+                                        "check": st.column_config.CheckboxColumn(
+                                            "check",
+                                            help="select row for compare parameter.",
+                                        )
+                                    },
+                                    disabled=[c for c in df_g1.columns if c != "check"],
+                                    key="parameter1_selector",
+                                )
+
+                            with col2:
+                                st.markdown(f"### {g2}")
+                                edited_parameter2 = st.data_editor(
+                                    df_g2,
+                                    width="stretch",
+                                    hide_index=True,
+                                    column_config={
+                                        "check": st.column_config.CheckboxColumn(
+                                            "check",
+                                            help="select row for compare parameter.",
+                                        )
+                                    },
+                                    disabled=[c for c in df_g2.columns if c != "check"],
+                                    key="parameter2_selector",
+                                )
+
+                            # --- select rows ---
+                            sel1 = edited_parameter1[edited_parameter1["check"] == True]
+                            sel2 = edited_parameter2[edited_parameter2["check"] == True]
+
+                            st.write(f"Selected: {g1} = {len(sel1)} | {g2} = {len(sel2)}")
+
+                            if sel1.empty and sel2.empty:
+                                st.info("Please select at least one row.")
+                            elif (not sel1.empty) and sel2.empty:
+                                tp1 = sel1.iloc[0]["TEST_PARAMETERS"]
+                                tt1 = sel1.iloc[0]["TEST_TIME_HR"]
+                                d1 = extract_dict_from_test_parameters(tp1)
+                                df_parameter_table = build_ttp_table(d1, g1, tt1)
+                                st.markdown("## Parameter Compare Table1")
+                                st.dataframe(df_parameter_table, width="stretch")
+                            elif sel1.empty and (not sel2.empty):
+                                tp2 = sel2.iloc[0]["TEST_PARAMETERS"]
+                                tt2 = sel2.iloc[0]["TEST_TIME_HR"]
+                                d2 = extract_dict_from_test_parameters(tp2)
+                                df_parameter_table = build_ttp_table(d2, g2, tt2)
+                                st.markdown("## Parameter Compare Table2")
+                                st.dataframe(df_parameter_table, width="stretch")
+                            else:
+                                # compare only first row.
+                                tp1 = sel1.iloc[0]["TEST_PARAMETERS"]
+                                tp2 = sel2.iloc[0]["TEST_PARAMETERS"]
+
+                                tt1 = sel1.iloc[0]["TEST_TIME_HR"]
+                                tt2 = sel2.iloc[0]["TEST_TIME_HR"]
+
+                                d1 = extract_dict_from_test_parameters(tp1)
+                                d2 = extract_dict_from_test_parameters(tp2)
+
+                                df_compare = build_compare_table(d1, d2, g1, g2, tt1, tt2)
+
+                                st.markdown("## Parameter Compare Table")
+                                # st.dataframe(df_compare, width="stretch")
+                                # hightligh different data
+                                mask = df_compare[g1] != df_compare[g2]
+                                st.dataframe(
+                                    df_compare.style.apply(
+                                        lambda x: ['background-color: #ad9709' if mask[i] else '' for i in range(len(df_compare))],
+                                        axis=0
+                                    ),
+                                    width="stretch"
+                                )
+
+                                st.write(f"Test time: {g1} = {tt1} hours | {g2} = {tt2} hours")
+        else:
+            st.info("No filtered data available. Query data above to view state-wise test time.")
+
+
+        # if not df_test.empty:
+        #     st.write(f"Filtered rows: {len(df_test)}")
+            
+        #     # Show ALL Data frame after fillter
+        #     # st.write(df_test)
+
+        #     df_test_parameter_full_data = df_test.copy()
+
+        #     df_test_parameter_pivot = df_test.pivot_table(
+        #         index=[ "OPERATION", "STATE_NAME", "PARAMETER_NAME", "TEST_NUMBER", "SPC_ID" ],
+        #         columns=["GROUP_NAME",],
+        #         values=["TEST_PARAMETERS"],
+        #         aggfunc={"TEST_PARAMETERS": "size"},
+        #         fill_value=0
+        #     ).reset_index()
+
+        #     st.write(df_test_parameter_pivot)
+        # else:
+        #     st.info("No filtered data available. Query data above to view state-wise test time.")
+
+
+
 source_df = load_test_time_hist_info()
 TestTime_Hist_block("Test Time Hist", source_df)
