@@ -2559,6 +2559,7 @@ with st.expander("Test Time By Test Parameter", expanded=False):
             st.warning("Too many rows after filtering. Please refine your filter to less than 3000 rows for better performance.")
             st.stop()
         
+        column_order = getPCOColumnOrder()
         KEY_COLS = ["OPERATION", "STATE_NAME", "PARAMETER_NAME", "TEST_NUMBER", "SPC_ID"]
         SHOW_COLS = ["check","STATE_NAME", "PARAMETER_NAME", "SPC_ID" ,"TEST_TIME_HR" ,"TEST_PARAMETERS"]
 
@@ -2582,24 +2583,33 @@ with st.expander("Test Time By Test Parameter", expanded=False):
                 values=[ "TEST_TIME_HR","TEST_PARAMETERS"],
                 aggfunc={"TEST_TIME_HR": "sum", "TEST_PARAMETERS": "size"},
                 fill_value=0
-            ).reset_index()
+            )
+
+            groups = df_test_parameter_pivot.columns.get_level_values(1).unique()
+            new_cols = (
+                [("TEST_TIME_HR", g) for g in groups if ("TEST_TIME_HR", g) in df_test_parameter_pivot.columns]
+            + [("TEST_PARAMETERS", g) for g in groups if ("TEST_PARAMETERS", g) in df_test_parameter_pivot.columns]
+            )
+
+            df_test_parameter_pivot = df_test_parameter_pivot.loc[:, new_cols].reset_index()
 
             df_pivot_show = flatten_columns(df_test_parameter_pivot)
 
-            # =========================== ORDER GROUP NAME BY COPILOT ======================
-            value_cols = [c for c in df_pivot_show.columns if c not in KEY_COLS]
-            groups = sorted(set("_".join(c.split("_")[2:]) for c in value_cols))
-            ordered_cols = []
-            for g in groups:
-                tp = f"TEST_PARAMETERS_{g}"
-                tt = f"TEST_TIME_HR_{g}"
-                if tp in value_cols:
-                    ordered_cols.append(tp)
-                if tt in value_cols:
-                    ordered_cols.append(tt)
-            # final column order
-            df_pivot_show = df_pivot_show[KEY_COLS + ordered_cols]
-            # ==============================================================================
+            #df_pivot_show = df_test_parameter_pivot
+
+            # # =========================== ORDER GROUP NAME BY COPILOT ======================
+            # value_cols = [c for c in df_pivot_show.columns if c not in KEY_COLS]
+            # ordered_cols = []
+            # for g in column_order:
+            #     tp = f"TEST_PARAMETERS_{g}"
+            #     tt = f"TEST_TIME_HR_{g}"
+            #     if tp in value_cols:
+            #         ordered_cols.append(tp)
+            #     if tt in value_cols:
+            #         ordered_cols.append(tt)
+            # # final column order
+            # df_pivot_show = df_pivot_show[KEY_COLS + ordered_cols]
+            # # ==============================================================================
 
 
             # checkbox
@@ -2664,8 +2674,11 @@ with st.expander("Test Time By Test Parameter", expanded=False):
                         #     filtered_full[filtered_full["GROUP_NAME"] == groups[0]],
                         #     width="stretch"
                         # )
+                        df_g1 = filtered_full[filtered_full["GROUP_NAME"] == groups[0]][SHOW_COLS].copy()
+                        default_value = len(df_g1) == 1
+                        df_g1 = df_g1.assign(check=default_value)
                         edited_parameter1 = st.data_editor(
-                            filtered_full[filtered_full["GROUP_NAME"] == groups[0]][SHOW_COLS],
+                            df_g1,
                             width="stretch",
                             hide_index=True,
                             column_config={
@@ -2692,7 +2705,7 @@ with st.expander("Test Time By Test Parameter", expanded=False):
 
                     else:
                         if len(groups) == 2:
-                            g1, g2 = groups[0], groups[1]
+                            g1, g2 = column_order[0], column_order[1]
                             col1, col2 = st.columns(2)
 
                             df_g1 = filtered_full[filtered_full["GROUP_NAME"] == g1][SHOW_COLS].copy()
