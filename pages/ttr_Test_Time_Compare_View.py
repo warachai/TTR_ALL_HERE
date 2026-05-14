@@ -2146,7 +2146,7 @@ with st.expander("Test Time By State", expanded=False):
                 # )
                 # st.plotly_chart(fig_sn, use_container_width=True)
 
-with st.expander("Test Time By Test org", expanded=False):
+with st.expander("Test Time By Test", expanded=False):
     st.markdown('<div class="section-title">Test Time By Test</div>', unsafe_allow_html=True)
 
     if not has_query_params:
@@ -2453,6 +2453,7 @@ def load_test_time_hist_info():
 
 
 def extract_dict_from_test_parameters(tp) -> dict:
+
     if tp is None or (isinstance(tp, float) and np.isnan(tp)):
         return {}
 
@@ -2466,14 +2467,20 @@ def extract_dict_from_test_parameters(tp) -> dict:
         return {}
 
     if isinstance(tp, str):
-        m = re.search(r"\{.*?\}", tp, flags=re.DOTALL)  # non-greedy
-        if not m:
+        tp = tp.replace("Parameters==>  ", "")
+        tp = re.sub(r"(\d+)L", r"\1", tp)
+
+        if not tp:
             return {}
         try:
-            return ast.literal_eval(m.group(0))
-        except Exception:
+            param_list = ast.literal_eval(tp)
+            if len(param_list) == 3 and isinstance(param_list[2], dict):
+                return param_list[2]
             return {}
 
+        except Exception:
+            st.write(f"Failed to parse parameters: {tp}")
+            return {}
     return {}
 
 
@@ -2513,6 +2520,7 @@ with st.expander("Test Time By Test Parameter", expanded=False):
     # if not has_query_params:
     # force condition
     df_test_parameter = load_merged_test_time_by_test_parm().copy()
+    group_name_list = df_test_parameter["GROUP_NAME"].dropna().unique().tolist()
     st.write(f"Total rows before filter: {len(df_test_parameter)}")
     if df_test_parameter.empty:
         st.info("No data available. Please run query to load data.")
@@ -2584,64 +2592,49 @@ with st.expander("Test Time By Test Parameter", expanded=False):
                 aggfunc={"TEST_TIME_HR": "sum", "TEST_PARAMETERS": "size"},
                 fill_value=0
             )
+           
+            # Order Col
+            metric_order = ["TEST_TIME_HR", "TEST_PARAMETERS"]
+            group_order = getPCOColumnOrder()
 
-            groups = df_test_parameter_pivot.columns.get_level_values(1).unique()
-            new_cols = (
-                [("TEST_TIME_HR", g) for g in groups if ("TEST_TIME_HR", g) in df_test_parameter_pivot.columns]
-            + [("TEST_PARAMETERS", g) for g in groups if ("TEST_PARAMETERS", g) in df_test_parameter_pivot.columns]
-            )
+            new_cols = [
+                (metric, grp)
+                for metric in metric_order
+                for grp in group_order
+                if (metric, grp) in df_test_parameter_pivot.columns
+            ]
 
-            df_test_parameter_pivot = df_test_parameter_pivot.loc[:, new_cols].reset_index()
+            df_test_parameter_pivot = df_test_parameter_pivot.loc[:, new_cols]
 
-            df_pivot_show = flatten_columns(df_test_parameter_pivot)
-
-            #df_pivot_show = df_test_parameter_pivot
-
-            # # =========================== ORDER GROUP NAME BY COPILOT ======================
-            # value_cols = [c for c in df_pivot_show.columns if c not in KEY_COLS]
-            # ordered_cols = []
-            # for g in column_order:
-            #     tp = f"TEST_PARAMETERS_{g}"
-            #     tt = f"TEST_TIME_HR_{g}"
-            #     if tp in value_cols:
-            #         ordered_cols.append(tp)
-            #     if tt in value_cols:
-            #         ordered_cols.append(tt)
-            # # final column order
-            # df_pivot_show = df_pivot_show[KEY_COLS + ordered_cols]
-            # # ==============================================================================
-
-
-            # checkbox
-            df_select = df_pivot_show.copy()
-            if "check" not in df_select.columns:
-                df_select.insert(0, "check", False)
-
-            edited = st.data_editor(
-                df_select,
-                width="stretch",
-                hide_index=True,
-                column_config={
-                    "check": st.column_config.CheckboxColumn(
-                        "check",
-                        help="select rows for compare parameter.",
-                        default=False,
-                    )
+            df_test_parameter_pivot = df_test_parameter_pivot.rename(
+                columns={
+                    "TEST_TIME_HR": "TestTime(Hrs.)",
+                    "TEST_PARAMETERS": "Count"
                 },
-                disabled=[c for c in df_select.columns if c != "check"],
-                key="pivot_selector",
+                level=0
             )
 
-            # filter only check rows
-            selected_rows = edited[edited["check"] == True]
 
+            # Display Main Table
+            selection = st.dataframe(
+                df_test_parameter_pivot, 
+                on_select="rerun",  # Triggers app rerun on selection
+                selection_mode="multi-row"  # Can also be "single-row"
+            )
+
+            selected_rows = df_test_parameter_pivot.copy().reset_index().iloc[selection.selection.rows]
             st.write(f"Selected {len(selected_rows)} rows.")
 
-            if selected_rows.empty:
+
+            if len(selected_rows) == 0:
                 st.info("Please select row.")
             else:
                 # remove duplicates rows
-                selected_keys = selected_rows[KEY_COLS].drop_duplicates()
+                # st.write(f"Selected rows before removing duplicates: {(selection)}")
+                # st.write(selected_rows)
+
+                df_selected = flatten_columns(selected_rows)
+                selected_keys = df_selected[KEY_COLS].drop_duplicates()
 
                 filtered_full = df_test_parameter_full_data.merge(
                     selected_keys,
