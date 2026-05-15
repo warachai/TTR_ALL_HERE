@@ -161,9 +161,96 @@ def get_pco_options_for_config(program: str, config: str) -> list:
     except Exception as e:
         st.debug(f"Error scanning PCOs for {program}/{config}: {e}")
         return ["NONE"]
+
+
 # -------------------------------------------------------------------
 # Load and merge all DRV_INV.csv files from folder hierarchy
 # -------------------------------------------------------------------
+
+def load_merged_data(source_file_name):
+    """
+    Recursively find all TEST_TIME_BY_STATE_ALL_sum.csv files in test_time_folder.
+    Read each file and add program, config, pco columns based on folder path.
+    Map DRV_INV columns to filter-compatible names.
+    Merge all into single dataframe.
+    """
+    dfs = []
+
+    source_file = source_file_name
+
+    # Print user selected config for debugging
+    # Collect selected values into a dict for easier access
+    # Build selected map from current URL/query parameter defaults instead of session state
+    # so it reflects the user's explicit selections (user settings) rather than transient session values.
+    selected = {}
+    params_local = st.query_params  # safe to call here; independent of later parsing
+    for idx in range(2):
+        prog_raw = params_local.get(f"prog_{idx}", "NONE")
+        cfg_raw = params_local.get(f"cfg_{idx}", "NONE")
+        pco_raw = params_local.get(f"pco_{idx}", "NONE")
+        # Handle list values (Streamlit may store as list) and normalize
+        def _norm(v):
+            if isinstance(v, list):
+                return v[0] if v else "NONE"
+            return v if isinstance(v, str) else "NONE"
+        selected[idx] = {
+            "program": _norm(prog_raw),
+            "config": _norm(cfg_raw),
+            "pco": _norm(pco_raw),
+        }
+
+    # Example: Check if path exists for each selected slot
+    user_selected = []
+    for idx, sel in selected.items():
+        prog, cfg, pco = sel["program"], sel["config"], sel["pco"]
+        if prog != "NONE" and cfg != "NONE" and pco != "NONE":
+            path = os.path.join(test_time_folder, prog, cfg, pco, source_file)
+            if path not in user_selected:
+                user_selected.append(path)
+            #st.write("path :",path)
+
+    count_loaded = 0
+    for root, dirs, files in os.walk(test_time_folder):
+        if source_file in files:
+            filepath = os.path.join(root, source_file)
+            
+            # Extract hierarchy from path: R:\Test_Time_Hist\{program}\{config}\{pco}\DRV_INV.csv
+            rel_path = os.path.relpath(filepath, test_time_folder)
+            parts = rel_path.split(os.sep)
+            
+            if filepath in user_selected:  # program/config/pco/filename
+                try:
+                    df = pd.read_csv(filepath)
+                    # Add the three hierarchy columns at the front
+                    df.insert(0, "program", str(count_loaded) + parts[0])
+                    df.insert(1, "config", parts[1])
+                    df.insert(2, "pco", parts[2])
+                    
+                    # Map DRV_INV columns to filter-compatible names
+                    # Use OPERATION as Category, SUB_BUILD_GROUP as SubCat for filtering
+                    if "OPERATION" in df.columns:
+                        df["Category"] = df["OPERATION"]
+                    if "SUB_BUILD_GROUP" in df.columns:
+                        df["SubCat"] = df["SUB_BUILD_GROUP"]
+                    
+                    dfs.append(df)
+                except Exception as e:
+                    st.warning(f"Could not load {filepath}: {e}")
+        count_loaded += 1
+    
+    if dfs:
+        merged_df = pd.concat(dfs, ignore_index=True)
+        return merged_df
+    else:
+        # Fallback to example data if no DRV_INV.csv files found
+        #st.warning("No DRV_INV.csv files found. Using example data.")
+        data = {}
+        return pd.DataFrame(data)
+
+# -------------------------------------------------------------------
+# Load and merge all DRV_INV.csv files from folder hierarchy
+# -------------------------------------------------------------------
+
 def load_merged_test_time_by_test():
     """
     Recursively find all TEST_TIME_BY_STATE_ALL_sum.csv files in test_time_folder.
@@ -1483,451 +1570,60 @@ with st.expander("Test Time By Operation", expanded=False):
     m_select_col = test_time_block("Test Time", source_df, "tt_overall", groupby_cols, group_by)
 
 
-# -------------------------------------------------------------------
-# Bottom: Distribution Charts for Selected Data
-# -------------------------------------------------------------------
+    # -------------------------------------------------------------------
+    # Bottom: Distribution Charts for Selected Data
+    # -------------------------------------------------------------------
 
-with st.expander("Test Time Distribution", expanded=False):
+    with st.expander("Test Time Distribution", expanded=False):
 
-    if not has_query_params:
-        pass
-     # Use filtered data if available
-       
-    elif "tt_filtered" in st.session_state and not st.session_state.tt_filtered.empty:
-
-        #df_dist = df_raw.copy()
-        df_dist = st.session_state.tt_filtered.copy()
-        # Ensure numeric TEST_TIME (already converted to hours earlier, but reconvert safely)
-
-        df_dist['TEST_TIME'] = pd.to_numeric(df_dist['TEST_TIME'], errors='coerce')
-        if "TEST_TIME_org" not in df_dist.columns:
-            df_dist['TEST_TIME_org'] = pd.to_numeric(df_dist['TEST_TIME'], errors='coerce').fillna(0)
-            df_dist['TEST_TIME'] = df_dist['TEST_TIME_org'] / 3600        
-        df_dist = df_dist.dropna(subset=['TEST_TIME'])
-
-        # Limit to operations of interest (optional) and remove labels with no data
-        custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
-        if "OPERATION" in df_dist.columns:
-            df_dist = df_dist[df_dist['OPERATION'].isin(custom_order)]
-            # After initial filter, keep only operations that actually have rows
-            present_ops = [op for op in custom_order if op in df_dist['OPERATION'].unique()]
-            # If user previously wanted reversed order, invert here (currently normal order retained)
-            present_ops_display = present_ops  # change to list(reversed(present_ops)) if reversed becomes default again
-            df_dist['OPERATION'] = pd.Categorical(df_dist['OPERATION'], categories=present_ops_display, ordered=True)
-
-        # Default plot settings (no user controls): Violin chart, color by pco if available, linear scale, no clipping
-        chart_type = "Violin"
-
-        if m_select_col is not None and len(m_select_col) == 1 and m_select_col[0] in df_dist.columns:
-            color_arg = m_select_col[0]
-        else:
-            color_arg = "pco" if "pco" in df_dist.columns else None
-        y_scale = "linear"
-
-        hover_cols = [c for c in ["SERIAL_NUM", "TRANS_SEQ"] if c in df_dist.columns]
-
-        if df_dist.empty or ("OPERATION" in df_dist.columns and len(df_dist['OPERATION'].cat.categories) == 0):
-            st.warning("No data remains for selected filters / clip range.")
-            st.stop()
-        if chart_type == "Strip (Jitter)":  # unreachable with default violin but kept for easy future toggle
-            # Manual jitter using scatter since px.strip doesn't support 'jitter' kwarg in current Plotly version
-            # Map OPERATION categories to numeric positions then add random noise
-            if "OPERATION" in df_dist.columns:
-                # Use only present operation categories for jitter mapping
-                op_categories = list(df_dist['OPERATION'].cat.categories if isinstance(df_dist['OPERATION'], pd.Categorical) else list(df_dist['OPERATION'].unique()))
-                op_index_map = {op: i for i, op in enumerate(op_categories)}
-                df_dist['_op_x'] = df_dist['OPERATION'].map(op_index_map).astype(float)
-                # Add jitter within +/-0.3 range
-                rng = np.random.default_rng(seed=42)  # deterministic for reproducibility per rerun
-                df_dist['_op_x_jitter'] = df_dist['_op_x'] + rng.uniform(-0.3, 0.3, size=len(df_dist))
-                fig = px.scatter(
-                    df_dist,
-                    x="_op_x_jitter",
-                    y="TEST_TIME",
-                    color=color_arg,
-                    hover_data=hover_cols + ["OPERATION"],
-                )
-                # Replace numeric axis ticks with category labels
-                fig.update_xaxes(
-                    tickmode='array',
-                    tickvals=list(range(len(op_categories))),
-                    ticktext=op_categories,
-                    title_text="Operation"
-                )
-            else:
-                fig = px.scatter(df_dist, y="TEST_TIME", color=color_arg, hover_data=hover_cols)
-        elif chart_type == "Box":
-            fig = px.box(
-                df_dist,
-                x="OPERATION",
-                y="TEST_TIME",
-                color=color_arg,
-                hover_data=hover_cols,
-            )
-            if "OPERATION" in df_dist.columns and isinstance(df_dist['OPERATION'], pd.Categorical):
-                fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OPERATION'].cat.categories))
-        else:  # Violin
-
-            fig = px.violin(
-                df_dist,
-                x="OPERATION",
-                y="TEST_TIME",
-                color=color_arg,
-                hover_data=hover_cols,
-                box=True,
-                points="all"
-            )
-
-            fig = add_violin_labels(
-                fig,
-                df=df_dist,
-                x_col="OPERATION",
-                y_col="TEST_TIME",
-                color_col=color_arg,
-                label_metric="mean",  # or "mean"
-            )
-            if "OPERATION" in df_dist.columns and isinstance(df_dist['OPERATION'], pd.Categorical):
-                fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OPERATION'].cat.categories))
-
-        # Set default selection mode to "select" (user select mode)
-        fig.update_layout(
-            dragmode="select",  # Default to user selection mode
-            yaxis_title="Test Time (hours)",
-            xaxis_title="Operation",
-            yaxis_type=y_scale,
-            legend_title=("pco" if color_arg == "pco" else None),
-            margin=dict(l=10, r=10, t=40, b=10)
-        )
-
-        
-        event = st.plotly_chart(fig, use_container_width=True,key="violin",on_select="rerun",)
-        st.caption("Distribution of TEST_TIME across selected operations and filters.")
-
-        pts = event.selection.points  # Streamlit PlotlySelectionState.points :contentReference[oaicite:2]{index=2}
-
-        # Extract SN, TS, OPER, Test Time, Group_Name from pts
-        if pts:
-            st.write("Total selected points:", len(pts))
-            violin_points_data = []
-            for pt in pts:
-                SN = pt.get("customdata", [None, None])[0]
-                TS = pt.get("customdata", [None, None])[1]
-                OPER = pt.get("x")
-                Test_Time = pt.get("y")
-                Group_Name = pt.get("legendgroup")
-                violin_points_data.append({
-                "SN": SN,
-                "TS": TS,
-                "OPER": OPER,
-                "Group_Name": Group_Name,
-                "Test Time": Test_Time                
-                })
-
-            violin_points_df = pd.DataFrame(violin_points_data)
-            # Set fixed width for columns in violin_points_df display
-            col_widths = {col: {"width": 120, 'help': col} for col in violin_points_df.columns}
-            if len(violin_points_df.columns) > 0:
-                last_col = violin_points_df.columns[-1]
-                col_widths[last_col] = {"width": 240, 'help': last_col}
-            # Add index column starting from 1
-            violin_points_df.index = violin_points_df.index + 1
-            violin_points_df.reset_index(inplace=True)
-            violin_points_df.rename(columns={"index": "No."}, inplace=True)
-            st.dataframe(violin_points_df, use_container_width=False, column_config=col_widths, height=8*32, hide_index=True)
-
-            
-        
-    else:
-        st.info("No filtered data available. Query data above to view distribution.")
-
-st.markdown("---")
-# -------------------------------------------------------------------
-# Bottom: Test Time By State
-# -------------------------------------------------------------------
-with st.expander("Test Time By State", expanded=False):
-    
-    st.markdown('<div class="section-title">Test Time By State</div>', unsafe_allow_html=True)
-
-    if not has_query_params:
-        st.info("No query parameters provided. Please select filters above.")
-    else:
-        df_state = load_merged_test_time_by_state_detail().copy()
-        # st.write(f"Filtering {attr_1} in {val_1}, remaining rows: {len(df_state)}")
-        # st.write(df_state.columns)
-
-        if attr_1 and val_1 and "" not in val_1 and attr_1 in df_state.columns:
-            df_state = df_state[df_state[attr_1].astype(str).isin(val_1)]
-            st.write(f"Filtering {attr_1} in {val_1}, remaining rows: {len(df_state)}")
-        if attr_2 and val_2 and "" not in val_2 and attr_2 in df_state.columns:
-            df_state = df_state[df_state[attr_2].astype(str).isin(val_2)]
-        if attr_3 and val_3 and "" not in val_3 and attr_3 in df_state.columns:
-            df_state = df_state[df_state[attr_3].astype(str).isin(val_3)]
-
-        if edited_df is not None and not edited_df.empty and len(edited_df) > 0:
-            # Remove rows matching
-            for _, row in edited_df.iterrows():
-                sn = str(row.get("SERIAL_NUM", "")).strip()
-                ts = str(row.get("TRANS_SEQ", "")).strip()
-                if sn and ts:
-                    df_state = df_state[~((df_state['SERIAL_NUM'].astype(str) == sn) & (df_state['TRANS_SEQ'].astype(str) == ts))]
-
-        c1_tt, c2_tt, c3_tt = st.columns(3)
-        with c1_tt:
-            filter_text_tt_op_tt = st.text_input(
-            "Filter Text Box",
-            "",
-            placeholder="Search in all columns...",
-            key="filter_text_tt_op_tt_test"
-            )
-
-        with c2_tt:
-            logic_tt = st.radio(
-            "Search Mode",
-            ["OR", "AND"],
-            horizontal=True,
-            help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
-            key="logic_tt_test"
-            
-        )
-            
-        with c3_tt:
-            avg_mode = st.radio(
-            "Avg Mode",
-            ["Normal", "Weighted"],
-            horizontal=True,
-            help="Normal: Regular average | Weighted: Weighted average based on counts",
-            key="avg_mode_test"
-            
-        )
-
-        group_cols_cnt =  ["SERIAL_NUM", "TRANS_SEQ", "OPERATION", "GROUP_NAME"]
-        df_cnt = df_state.groupby(group_cols_cnt, dropna=False).agg(N=('SERIAL_NUM', 'size')).reset_index()
-        total_rows = len(df_cnt)
-        print(f"[summary] Total rows in df_cnt: {total_rows}")
-
-        group_cols_opr_cnt = ["OPERATION", "GROUP_NAME"]
-        df_opr_cnt = df_cnt.groupby(group_cols_opr_cnt, dropna=False).agg(OPER_CNT=('SERIAL_NUM', 'size')).reset_index()
-
-        df_state = apply_filter(
-            df_state,
-            filter_text_tt_op_tt,
-            logic_tt,
-            ["program", "config", "pco", "STATE_NAME", "OPERATION"],
-        )
-
-
-        if not df_state.empty:
-
-            # Group by state and calculate mean and count
-            if "STATE_NAME" in df_state.columns and len(m_select_col) > 1:
-
-                
-                df_state = pd.merge(df_state, df_opr_cnt, on=["OPERATION", "GROUP_NAME"], how="left")
-                state_summary = df_state.pivot_table(
-                    index=[ "OPERATION", "STATE_NAME"],
-                    columns=["pco",], #"program","pco", "config"
-                    values=["TestTime(hrs)", "N", 'OPER_CNT',"SERIAL_NUM"],
-                    aggfunc={"TestTime(hrs)": "mean", "N": "sum", 'OPER_CNT': 'mean', "SERIAL_NUM": "size"},
-                    fill_value=0
-                ).reset_index() 
-
-                # st.write(state_summary.columns)
-                # st.write(state_summary)
-
-                if avg_mode == "Weighted":
-                    state_summary['TestTime(hrs)'] = (state_summary['TestTime(hrs)']  * state_summary['SERIAL_NUM']) / state_summary['OPER_CNT'].replace(0, np.nan)  # avoid division by zero
-                    state_summary['N'] = state_summary['OPER_CNT'].replace(0, np.nan).round().astype("Int64")
-
-                state_summary = state_summary.drop(columns=['OPER_CNT', 'SERIAL_NUM'])
-
-                # Flatten MultiIndex columns into readable single-level names
-                def _flatten(col):
-                    if not isinstance(col, tuple):
-                        return col
-                    parts = [str(p) for p in col if p not in ("", None)]
-                    return "_".join(parts)
-                state_summary.columns = [_flatten(c) for c in state_summary.columns]
-
-                column_order = getPCOColumnOrder()
-                
-                cols = state_summary.columns.tolist()
-                if len(column_order) == 2 and len(cols) >= 6:
-                    # Reorder TestTime and N columns based on column_order
-                    if column_order[0] not in cols[2]:
-                        cols[2], cols[3],cols[4], cols[5]  = cols[3], cols[2], cols[5], cols[4]
-                        state_summary = state_summary[cols]
-
-                fixed = ["OPERATION", "STATE_NAME"]
-                value_cols = [c for c in state_summary.columns if c not in fixed]
-
-                # Separate TestTime and N columns by prefix after flattening
-                tt_cols = [c for c in value_cols if c.startswith("TestTime(hrs)_")]
-                n_cols = [c for c in value_cols if c.startswith("N_")]
-
-                # Reorder columns: fixed + test time + counts
-                state_summary = state_summary[fixed + tt_cols + n_cols]
-
-                # If exactly two TestTime columns, compute diff (first minus second)
-                if len(tt_cols) == 2:
-                    state_summary["diff_TestTime(hrs)"] = state_summary[tt_cols[0]] - state_summary[tt_cols[1]]
-                elif len(tt_cols) > 2:
-                    st.info("More than two TestTime groups present; diff not computed.")
-
-                # Ensure custom order is applied to OPERATION column and sort by STATE_NAME
-                custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
-                if "OPERATION" in state_summary.columns:
-                    state_summary["OPERATION"] = pd.Categorical(
-                        state_summary["OPERATION"], categories=custom_order, ordered=True
-                    )
-                if "STATE_NAME" in state_summary.columns:
-                    state_summary = state_summary.sort_values(by=["OPERATION", "STATE_NAME"])
-
-                # Display the summary table
-                # Round floating point (TestTime and diff) to 2 decimals
-                float_like_cols = [c for c in state_summary.columns if c.startswith("TestTime(hrs)_") or c.startswith("diff_TestTime(hrs)")]
-                for c in float_like_cols:
-                    if c in state_summary.columns:
-                        state_summary[c] = pd.to_numeric(state_summary[c], errors='coerce').round(2)
-
-                # Add TOTAL row summing numeric columns of current display
-                fixed = ["program", "OPERATION", "STATE_NAME"]
-                numeric_cols = [c for c in state_summary.columns if c not in fixed and pd.api.types.is_numeric_dtype(state_summary[c])]
-                if numeric_cols:
-                    total_row = {col: state_summary[col].sum() for col in numeric_cols}
-                    total_row.update({ "OPERATION": "ALL", "STATE_NAME": "ALL"})
-                    state_summary = pd.concat([state_summary, pd.DataFrame([total_row])], ignore_index=True)
-                    # Re-round float columns for consistency
-                    for c in float_like_cols:
-                        if c in state_summary.columns:
-                            state_summary[c] = pd.to_numeric(state_summary[c], errors='coerce').round(2)
-
-                # Display with st.dataframe (no row-level bold styling available); TOTAL row identifiable by ALL values
-                def highlight_last_row(row):
-                    if row.name == len(state_summary) - 1:  # last row
-                        return ['font-weight: bold; color: Black;'] * len(row)
-                    return [''] * len(row)
-
-                # column_order = getPCOColumnOrder()
-                # if len(column_order) == 2:
-                #     cols = state_summary.columns.tolist()
-                #     # Reorder TestTime and N columns based on column_order
-                #     if column_order[0] not in cols[2]:
-                #         cols[2], cols[3],cols[4], cols[5]  = cols[3], cols[2], cols[5], cols[4]
-                #         state_summary = state_summary[cols]
-                        
-                styled = state_summary.style.apply(highlight_last_row, axis=1)
-
-                col_widths = {col: {"width": 120, 'help': col} for col in state_summary.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
-
-                st.dataframe(styled, use_container_width=True, column_config=col_widths, height=15*32)
-
-            elif m_select_col is not None and len(m_select_col) == 1 and m_select_col[0] in df_dist.columns:
-                color_arg = m_select_col[0]
-
-                state_summary = df_state.pivot_table(
-                    index=[ "OPERATION", "STATE_NAME"],
-                    columns= m_select_col[0], #"program","pco", "config"
-                    values=["TestTime(hrs)", "N"],
-                    aggfunc={"TestTime(hrs)": "mean", "N": "sum"},
-                    fill_value=0
-                ).rename(columns={"N": "RecordCount"}, level=0).reset_index()
-
-                
-                state_summary = state_summary[
-                    ["OPERATION", "STATE_NAME", "TestTime(hrs)", "RecordCount"]
-                ]
-
-
-                #st.dataframe(state_summary, use_container_width=True, column_config=col_widths, height=15*32)
-                st.dataframe(state_summary, use_container_width=True, height=15*32)
-
-            else:
-                st.warning("The dataset does not contain a 'STATE' column.")
-        else:
-            st.info("No filtered data available. Query data above to view state-wise test time.")
-
-        csv = df_state.to_csv(index=False).encode('utf-8')
-        st.download_button(
-        label="Download Data as CSV",
-        data=csv,
-        file_name="test_time_by_state.csv",
-        mime="text/csv",
-        key="test_time_by_state_download_btn"
-        )
-
-        plot_graph = st.checkbox("Plot Graph", value=False)
-
-
+        if not has_query_params:
+            pass
         # Use filtered data if available
-        if not df_state.empty and len(df_state) < 2500 and plot_graph:
-            st.write(f"Generating distribution chart for {len(df_state)} rows.")
-            df_dist = df_state.copy()
+        
+        elif "tt_filtered" in st.session_state and not st.session_state.tt_filtered.empty:
 
-            df_dist['OP_STATE'] = df_dist['OPERATION'].astype(str) + " - " + df_dist['STATE_NAME'].astype(str)
-            
+            #df_dist = df_raw.copy()
+            df_dist = st.session_state.tt_filtered.copy()
             # Ensure numeric TEST_TIME (already converted to hours earlier, but reconvert safely)
-
-
-            if "TEST_TIME" not in df_dist.columns:
-                df_dist['TEST_TIME'] = pd.to_numeric(df_dist['TestTime(hrs)'], errors='coerce').fillna(0)
-                
 
             df_dist['TEST_TIME'] = pd.to_numeric(df_dist['TEST_TIME'], errors='coerce')
             if "TEST_TIME_org" not in df_dist.columns:
                 df_dist['TEST_TIME_org'] = pd.to_numeric(df_dist['TEST_TIME'], errors='coerce').fillna(0)
-                df_dist['TEST_TIME'] = df_dist['TEST_TIME_org']     
+                df_dist['TEST_TIME'] = df_dist['TEST_TIME_org'] / 3600        
             df_dist = df_dist.dropna(subset=['TEST_TIME'])
 
-
-
-
-            hover_cols = [c for c in ["SERIAL_NUM", "TRANS_SEQ"] if c in df_dist.columns]
-            # st.write(f"Hover columns: {hover_cols}")
-            # st.write(f"Hover columns: {df_dist.columns}")
-
-            # Add a selectbox to choose what to plot on x-axis
-
-            plot_list = ["OP_STATE", "CMS_CONFIG", "NUM_HEADS", "CAPACITY", "HEAD", "PN3", 
-                 "IR_DRIVE", "POWER_LOSS_DRIVE", "WAFER_TYPE", "HGA_SORT_06", "CAL2_FPW", "SBR", "STATE_NAME","GROUP_NAME", 'config']
-            
-            plot_by = m_select_col[0] if m_select_col is not None and len(m_select_col) == 1 and m_select_col[0] in df_dist.columns else "OP_STATE"
-            # plot_by = st.selectbox(
-            #     "Plot by",
-            #     plot_list,
-            #     index=0,
-            #     key="plot_by_state_chart"
-            # )
+            # Limit to operations of interest (optional) and remove labels with no data
+            custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+            if "OPERATION" in df_dist.columns:
+                df_dist = df_dist[df_dist['OPERATION'].isin(custom_order)]
+                # After initial filter, keep only operations that actually have rows
+                present_ops = [op for op in custom_order if op in df_dist['OPERATION'].unique()]
+                # If user previously wanted reversed order, invert here (currently normal order retained)
+                present_ops_display = present_ops  # change to list(reversed(present_ops)) if reversed becomes default again
+                df_dist['OPERATION'] = pd.Categorical(df_dist['OPERATION'], categories=present_ops_display, ordered=True)
 
             # Default plot settings (no user controls): Violin chart, color by pco if available, linear scale, no clipping
             chart_type = "Violin"
-            # Set color based on plot_by selection
-            # If plotting by OP_STATE, color by pco; otherwise color by plot_by column
-            if plot_by == "OP_STATE":
-                color_arg = "pco" if "pco" in df_dist.columns else None
+
+            if m_select_col is not None and len(m_select_col) == 1 and m_select_col[0] in df_dist.columns:
+                color_arg = m_select_col[0]
             else:
-                color_arg = plot_by if plot_by in df_dist.columns else None
+                color_arg = "pco" if "pco" in df_dist.columns else None
             y_scale = "linear"
 
-            # Create the appropriate column based on selection
-            if plot_by == "OP_STATE":
-                df_dist['plot_column'] = df_dist['OPERATION'].astype(str) + " - " + df_dist['STATE_NAME'].astype(str)
-            elif plot_by in plot_list:
-                df_dist['plot_column'] = df_dist[plot_by].astype(str) if plot_by in df_dist.columns else "Unknown"
-            if df_dist.empty or ("plot_column" not in df_dist.columns):
+            hover_cols = [c for c in ["SERIAL_NUM", "TRANS_SEQ"] if c in df_dist.columns]
+
+            if df_dist.empty or ("OPERATION" in df_dist.columns and len(df_dist['OPERATION'].cat.categories) == 0):
                 st.warning("No data remains for selected filters / clip range.")
-                st.write(df_dist.columns)
-                st.write(len(df_dist))
-                st.write(("plot_column" not in df_dist.columns))
-                st.write(df_dist.empty )
                 st.stop()
             if chart_type == "Strip (Jitter)":  # unreachable with default violin but kept for easy future toggle
                 # Manual jitter using scatter since px.strip doesn't support 'jitter' kwarg in current Plotly version
                 # Map OPERATION categories to numeric positions then add random noise
-                if "plot_column" in df_dist.columns:
+                if "OPERATION" in df_dist.columns:
                     # Use only present operation categories for jitter mapping
-                    op_categories = list(df_dist['plot_column'].cat.categories if isinstance(df_dist['plot_column'], pd.Categorical) else list(df_dist['plot_column'].unique()))
+                    op_categories = list(df_dist['OPERATION'].cat.categories if isinstance(df_dist['OPERATION'], pd.Categorical) else list(df_dist['OPERATION'].unique()))
                     op_index_map = {op: i for i, op in enumerate(op_categories)}
-                    df_dist['_op_x'] = df_dist['plot_column'].map(op_index_map).astype(float)
+                    df_dist['_op_x'] = df_dist['OPERATION'].map(op_index_map).astype(float)
                     # Add jitter within +/-0.3 range
                     rng = np.random.default_rng(seed=42)  # deterministic for reproducibility per rerun
                     df_dist['_op_x_jitter'] = df_dist['_op_x'] + rng.uniform(-0.3, 0.3, size=len(df_dist))
@@ -1936,32 +1632,32 @@ with st.expander("Test Time By State", expanded=False):
                         x="_op_x_jitter",
                         y="TEST_TIME",
                         color=color_arg,
-                        hover_data=hover_cols + plot_by,
+                        hover_data=hover_cols + ["OPERATION"],
                     )
                     # Replace numeric axis ticks with category labels
                     fig.update_xaxes(
                         tickmode='array',
                         tickvals=list(range(len(op_categories))),
                         ticktext=op_categories,
-                        title_text="State Name"
+                        title_text="Operation"
                     )
                 else:
                     fig = px.scatter(df_dist, y="TEST_TIME", color=color_arg, hover_data=hover_cols)
             elif chart_type == "Box":
                 fig = px.box(
                     df_dist,
-                    x="plot_column",
+                    x="OPERATION",
                     y="TEST_TIME",
                     color=color_arg,
                     hover_data=hover_cols,
                 )
-                if "plot_column" in df_dist.columns and isinstance(df_dist['plot_column'], pd.Categorical):
-                    fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['plot_column'].cat.categories))
+                if "OPERATION" in df_dist.columns and isinstance(df_dist['OPERATION'], pd.Categorical):
+                    fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OPERATION'].cat.categories))
             else:  # Violin
-                
+
                 fig = px.violin(
                     df_dist,
-                    x="plot_column",
+                    x="OPERATION",
                     y="TEST_TIME",
                     color=color_arg,
                     hover_data=hover_cols,
@@ -1972,421 +1668,572 @@ with st.expander("Test Time By State", expanded=False):
                 fig = add_violin_labels(
                     fig,
                     df=df_dist,
-                    x_col="plot_column",
+                    x_col="OPERATION",
                     y_col="TEST_TIME",
                     color_col=color_arg,
                     label_metric="mean",  # or "mean"
                 )
-                if "plot_column" in df_dist.columns and isinstance(df_dist['plot_column'], pd.Categorical):
-                    fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['plot_column'].cat.categories))
+                if "OPERATION" in df_dist.columns and isinstance(df_dist['OPERATION'], pd.Categorical):
+                    fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['OPERATION'].cat.categories))
 
+            # Set default selection mode to "select" (user select mode)
             fig.update_layout(
-                 dragmode="select",  # Default to user selection mode
+                dragmode="select",  # Default to user selection mode
                 yaxis_title="Test Time (hours)",
-                xaxis_title=color_arg,
+                xaxis_title="Operation",
                 yaxis_type=y_scale,
-                legend_title=(color_arg),
+                legend_title=("pco" if color_arg == "pco" else None),
                 margin=dict(l=10, r=10, t=40, b=10)
             )
-            event_state = st.plotly_chart(fig, use_container_width=True,key="violin_state",on_select="rerun")
-            st.caption(f"Distribution of TEST_TIME across selected operations and filters.")
 
-            pts_state = event_state.selection.points  # Streamlit PlotlySelectionState.points :contentReference[oaicite:2]{index=2}
+            
+            event = st.plotly_chart(fig, use_container_width=True,key="violin",on_select="rerun",)
+            st.caption("Distribution of TEST_TIME across selected operations and filters.")
+
+            pts = event.selection.points  # Streamlit PlotlySelectionState.points :contentReference[oaicite:2]{index=2}
 
             # Extract SN, TS, OPER, Test Time, Group_Name from pts
-            if pts_state:
-                st.write("Total selected points:", len(pts_state))
+            if pts:
+                st.write("Total selected points:", len(pts))
                 violin_points_data = []
-                for pt in pts_state:
+                for pt in pts:
                     SN = pt.get("customdata", [None, None])[0]
                     TS = pt.get("customdata", [None, None])[1]
                     OPER = pt.get("x")
-                    OPER2 = pt.get("x")
                     Test_Time = pt.get("y")
                     Group_Name = pt.get("legendgroup")
                     violin_points_data.append({
                     "SN": SN,
                     "TS": TS,
-                    f"{color_arg}_1": OPER.split(" - ")[0] if " - " in OPER else OPER,  # extract state name if OP_STATE format
-                    "Group_Name": Group_Name,                    
-                    f"{color_arg}_2": OPER.split(" - ")[1] if " - " in OPER else OPER,  # extract state name if OP_STATE format                    
-                    "Test Time": Test_Time
-
+                    "OPER": OPER,
+                    "Group_Name": Group_Name,
+                    "Test Time": Test_Time                
                     })
+
                 violin_points_df = pd.DataFrame(violin_points_data)
                 # Set fixed width for columns in violin_points_df display
-                col_widths = {col: {"width": 120} for col in violin_points_df.columns}
+                col_widths = {col: {"width": 120, 'help': col} for col in violin_points_df.columns}
                 if len(violin_points_df.columns) > 0:
                     last_col = violin_points_df.columns[-1]
-                    col_widths[last_col] = {"width": 240}
+                    col_widths[last_col] = {"width": 240, 'help': last_col}
                 # Add index column starting from 1
                 violin_points_df.index = violin_points_df.index + 1
                 violin_points_df.reset_index(inplace=True)
                 violin_points_df.rename(columns={"index": "No."}, inplace=True)
                 st.dataframe(violin_points_df, use_container_width=False, column_config=col_widths, height=8*32, hide_index=True)
+
+                
+            
         else:
             st.info("No filtered data available. Query data above to view distribution.")
+
+# -------------------------------------------------------------------
+# Bottom: Test Time By State
+# -------------------------------------------------------------------
+with st.expander("Test Time By State", expanded=False):
+    checklist_tt_by_state = st.checkbox("Show Test Time By State", value=False)
     
-        with st.expander("Test Time By Category", expanded=False):    # Test Time By Category
-            # Copy df_state 
-            df_raw_state = df_state.copy()
-
-            if "OPER_CNT" in df_raw_state.columns:
-                df_raw_state = df_raw_state.pivot_table(
-                    index=["OPERATION", "STATE_NAME", "GROUP_NAME", "OPER_CNT"],
-                    aggfunc={"TestTime(hrs)": "mean", "SERIAL_NUM": "size"},
-                ).reset_index() 
-
-                # force to weighted 
-                if avg_mode == "Weighted":
-                    df_raw_state['TestTime(hrs)'] = (df_raw_state['TestTime(hrs)']  * df_raw_state['SERIAL_NUM']) / df_raw_state['OPER_CNT'].replace(0, np.nan)  # avoid division by zero
-            else:
-                df_raw_state = df_raw_state.pivot_table(
-                    index=["OPERATION", "STATE_NAME", "GROUP_NAME"],
-                    aggfunc={"TestTime(hrs)": "mean", "SERIAL_NUM": "size"},
-                ).reset_index()
-            # st.write(df_raw_state)
-            st.write(test_group_folder)
-
-            df_dorado_all_state = pd.read_csv(test_group_folder)
-            join_test_group_result = pd.merge(df_raw_state, df_dorado_all_state, on=['OPERATION' , 'STATE_NAME'], how='left')
-            join_test_group_result['Test Group'] = join_test_group_result['Test Group'].fillna('UNKNOW')
-
-
-            st.write(f"Raw State {len(df_raw_state.index)} row, Dorado All State {len(df_dorado_all_state)} row, Raw State After Join {len(join_test_group_result)} row.")
-
-            # st.write(df_dorado_all_state)
-            # st.write(join_test_group_result)
-
-            # join_test_group_result = join_test_group_result.pivot_table(
-            #     index=[ "Test Group" ],
-            #     columns=["GROUP_NAME",],
-            #     values=["TestTime(hrs)", "STATE_NAME"],
-            #     aggfunc={"TestTime(hrs)": "sum", "STATE_NAME": "size"},
-            #     fill_value=0
-            # ).reset_index()
-            # st.write(join_test_group_result)
-
-            
-            df_tt_by_category = join_test_group_result.pivot_table(
-                index=["Test Group"],
-                columns=["GROUP_NAME"],
-                values=["TestTime(hrs)", "STATE_NAME"],
-                aggfunc={"TestTime(hrs)": "sum", "STATE_NAME": "size"},
-                fill_value=0,
-                sort=False
-            )
-
-
-
-            chart_ttbc = df_tt_by_category.copy()
-
-            metrics = list(dict.fromkeys(df_tt_by_category.columns.get_level_values(0)))
-            groups  = list(dict.fromkeys(df_tt_by_category.columns.get_level_values(1)))
-
-            for m in metrics:
-                df_tt_by_category[(m, "sum")] = df_tt_by_category[m].sum(axis=1)
-
-            base_groups = [g for g in groups if g != "sum"]
-            swapped_groups = base_groups[::-1]
-
-            metric_order = ["TestTime(hrs)", "STATE_NAME"]
-
-            new_cols = []
-            for m in metric_order:
-                for g in swapped_groups:
-                    new_cols.append((m, g))
-                new_cols.append((m, "sum"))
-
-            df_tt_by_category = df_tt_by_category.reindex(columns=pd.MultiIndex.from_tuples(new_cols))
-            df_tt_by_category.loc["Total"] = df_tt_by_category.sum()
-            df_tt_by_category = df_tt_by_category.reset_index()
-            st.write(df_tt_by_category)
-
-            # Download Data After join
-            df_tt_by_category_csv = df_tt_by_category.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="Download Data as CSV",
-                data=df_tt_by_category_csv,
-                file_name="df_tt_by_category.csv",
-                mime="text/csv",
-                key="df_tt_by_category_download_btn"
-            )
-
-            plot_graph_ttbc = st.checkbox("Plot Graph Test Time By Category", value=False)
-
-            if plot_graph_ttbc:
-            
-                groups_order = swapped_groups
-                x_order = list(chart_ttbc.index)
-
-                # bar chart TestTime(hrs)
-                df_tt = (chart_ttbc["TestTime(hrs)"].reset_index().melt(id_vars="Test Group", var_name="GROUP_NAME", value_name="TestTime(hrs)"))
-
-                fig_tt = px.bar(
-                    df_tt,
-                    x="Test Group", y="TestTime(hrs)",
-                    color="GROUP_NAME",
-                    barmode="group",
-                    category_orders={"GROUP_NAME": groups_order, "Test Group": x_order},
-                    title="TestTime(hrs) by Test Group and GROUP_NAME"
-                )
-                st.plotly_chart(fig_tt, use_container_width=True)
-
-                # # bar chart STATE_NAME
-                # df_sn = (chart_ttbc["STATE_NAME"].reset_index().melt(id_vars="Test Group", var_name="GROUP_NAME", value_name="STATE_NAME"))
-
-                # fig_sn = px.bar(
-                #     df_sn,
-                #     x="Test Group", y="STATE_NAME",
-                #     color="GROUP_NAME",
-                #     barmode="group",
-                #     category_orders={"GROUP_NAME": groups_order, "Test Group": x_order},
-                #     title="STATE_NAME (count) by Test Group and GROUP_NAME"
-                # )
-                # st.plotly_chart(fig_sn, use_container_width=True)
-
-with st.expander("Test Time By Test", expanded=False):
-    st.markdown('<div class="section-title">Test Time By Test</div>', unsafe_allow_html=True)
-
-    if not has_query_params:
-        st.info("No query parameters provided. Please select filters above.")
-    else:
-        df_test = load_merged_test_time_by_test().copy()
-
-        c1_tt, c2_tt, c3_tt, c4_tt = st.columns(4)
-        col_alias = {
-            "STATE": "STATE_NAME",
-            "OP": "OPERATION",
-            "PARM": "PARAMETER_NAME",
-            "TEST": "TEST_NUMBER",
-        }
-        with c1_tt:
-            filter_text_tt_op_tt = st.text_input(
-            "Filter Text Box",
-            "",
-            placeholder="Search in all columns...",
-            help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP TEST:275\n- [STATE:STATE_NAME, OP:OPERATION, PARM:PARAMETER_NAME, TEST:TEST_NUMBER]",
-            key="filter_text_tt_op_tt"
-            )
-
-        with c2_tt:
-            view_type = st.selectbox(
-                "View Type",
-                ["By Test", "By Oper"],
-                index=0,
-                help="Choose how to group the test time data.",
-                key="view_type_tt_by_test"
-            )
-            
-        with c3_tt:
-            logic_tt_op_tt = st.radio(
-            "Search Mode",
-            ["OR", "AND"],
-            horizontal=True,
-            help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
-            key="logic_tt_op_tt"
-            
-            )
-
-        with c4_tt:
-            avg_mode_tt_op_tt = st.radio(
-            "Avg Mode",
-            ["Normal", "Weighted"],
-            horizontal=True,
-            help="Normal: Regular average | Weighted: Weighted average",
-            key="avg_mode_tt_op_tt"
-            
-            )
-
-        df_test = apply_filter_flex(
-            df_test,
-            filter_text_tt_op_tt,
-            logic_tt_op_tt,
-            [ "STATE_NAME", "OPERATION", 'TEST_NUMBER', 'PARAMETER_NAME'],
-            col_alias=col_alias
-        )
-
-        st.write(f"Filtered rows: {len(df_test)}")
+    if checklist_tt_by_state:
+        st.markdown('<div class="section-title">Test Time By State</div>', unsafe_allow_html=True)
         
-        if not df_test.empty and len(df_test) < 3000:
-            # Example: group by a column that exists, e.g. 'OPERATION' or 'STATE_NAME'
-            total_group_operation = df_test.groupby(["pco", "config"]).size().reset_index(name='count')
-            total_group_operation['GROUP_NAME'] = total_group_operation['pco'] + "_" + total_group_operation['config']
-            group_name_list = total_group_operation['GROUP_NAME'].tolist()
-
-            #st.write("all operations mmm:", group_name_list)
-            # column_order = getPCOColumnOrder()
-            # df_test["pco"] = pd.Categorical(df_test["pco"], categories=column_order, ordered=True)
-            if avg_mode_tt_op_tt == "Weighted":
-                if "TestTime(hrs)_wgt" in df_test.columns:
-                    df_test["TestTime(hrs)"] = df_test["TestTime(hrs)_wgt"]
-                    df_test["N"] = df_test["OPER_CNT"]
-                else:
-                    st.warning("Weighted average column 'TestTime(hrs)_wgt' not found. Using unweighted 'TestTime(hrs)' instead.")
-            tt_summary = df_test.pivot_table(
-                    index=['TEST_NUMBER', 'PARAMETER_NAME',"STATE_NAME", "OPERATION"],
-                    columns=["pco", "config"],
-                    values=["TestTime(hrs)", "N"],
-                    aggfunc={"TestTime(hrs)": "sum", "N": "sum"},
-                    fill_value=0
-                ).reset_index()
-
-            # ---------------- Build AgGrid options ----------------
-            tt_summary.columns = [
-                "_".join([str(c) for c in col]).strip("_") if isinstance(col, tuple) else col
-                for col in tt_summary.columns
-            ]
-
-            # Replace column names containing 'TestTime(hrs)_' with ''
-            tt_summary.columns = [
-                col.replace('TestTime(hrs)_', 'TT_') if isinstance(col, str) else col
-                for col in tt_summary.columns
-            ]
-
-            cols = tt_summary.columns.tolist()
-            if len(cols) >= 8:
-                column_order = getPCOColumnOrder()
-            
-                cols[4], cols[5],cols[6], cols[7]  = cols[6], cols[7], cols[4], cols[5]
-                tt_summary = tt_summary[cols]
-                #st.write("Column order:", column_order, len(column_order)) 
-                if len(column_order) == 2:
-                    cols = tt_summary.columns.tolist()
-                    # Reorder TestTime and N columns based on column_order
-                    #st.write("Columns before reordering:", cols, column_order)
-                    if column_order[0] not in cols[4]:
-                        #st.write("Reordering columns for display...")
-                        cols[4], cols[5],cols[6], cols[7]  = cols[5], cols[4], cols[7], cols[6]
-                        tt_summary = tt_summary[cols]
-
-                cols = tt_summary.columns.tolist()     
-                test_time_cols = [c for c in tt_summary.columns if c.startswith("TT_")]
-                if len(test_time_cols) == 2:
-                    tt_summary["TT_Diff"] = tt_summary[test_time_cols[0]] - tt_summary[test_time_cols[1]]
-
-            custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
-
-            # 2) Build AgGrid options
-            gb = GridOptionsBuilder.from_dataframe(tt_summary)
-
-            gb.configure_column(
-                "OPERATION",
-                sortingOrder=["asc"],
-                comparator=f"""
-                function(a, b) {{
-                    const order = {custom_order};
-                    return order.indexOf(a) - order.indexOf(b);
-                }}
-                """
-            )            
-
-            # group by TEST_NUMBER (now a plain string column name)
-            if view_type == "By Test":
-                gb.configure_column("TEST_NUMBER", rowGroup=True, hide=True)
-                gb.configure_column("PARAMETER_NAME", rowGroup=True, hide=True)
-            elif view_type == "By Oper":
-                gb.configure_column("OPERATION", rowGroup=True, hide=True)
-                gb.configure_column("TEST_NUMBER", rowGroup=True, hide=True)
-
-            try:
-                if len(test_time_cols) == 2:
-                    gb.configure_column('TT_Diff', aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
-            except:
-                pass
-            # Aggregation for numeric columns when grouped
-            for col in group_name_list:
-                gb.configure_column('TT_' + col, aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
-                gb.configure_column('N_' + col, aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
-
-
-            # General grid options
-            gb.configure_grid_options(
-                groupDisplayType="multipleColumns",  # show group columns instead of hiding
-                groupDefaultExpanded=0,              # 0 = collapsed, -1 = fully expanded
-                animateRows=True,
-                suppressAggFuncInHeader=False,
-            )
-
-            #grid_options = gb.build()
-
-            # ---------------- Render AgGrid ----------------
-            # grid_response = AgGrid(
-            #     tt_summary,
-            #     gridOptions=grid_options,
-            #     enable_enterprise_modules=True,
-            #     update_mode=GridUpdateMode.NO_UPDATE,
-            #     fit_columns_on_grid_load=True,
-            #     height=25*32,
-            # ) 
-
-            # Autosize columns after grid loads
-
-            # This JS code will autosize all columns after grid is ready
-            auto_size_js = JsCode("""
-            function(e) {
-                let gridApi = e.api;
-                gridApi.sizeColumnsToFit();
-            }
-            """)
-
-
-
-            # Render AgGrid with export button and fixed column widths
-            # Set column widths for key columns
-            col_widths = {
-                "TEST_NUMBER": 100,
-                "PARAMETER_NAME": 180,
-                "STATE_NAME": 120,
-                "OPERATION": 110,
-            }
-            # Add widths for TT_ and N_ columns
-            for col in tt_summary.columns:
-                if col.startswith("TT_") or col.startswith("N_") or col == "TT_Diff":
-                    col_widths[col] = 110
-
-            # Extract the list of column fields from columnDefs
-            for col, width in col_widths.items():
-                if col in tt_summary.columns:
-                    gb.configure_column(col, width=width,autoHeaderHeight=True,headerTooltip = col  )
-
-            grid_options = gb.build()
-
-            grid_response = AgGrid(
-                tt_summary,
-                gridOptions=grid_options,
-                enable_enterprise_modules=True,
-                update_mode=GridUpdateMode.NO_UPDATE,
-                fit_columns_on_grid_load=False,  # Don't auto-fit, use our widths
-                height=19*32,
-                onGridReady=auto_size_js,
-                allow_unsafe_jscode=True,
-                custom_js=[
-                    JsCode("""
-                    function(e) {
-                        e.api.sizeColumnsToFit();
-                        e.api.gridOptions.api.gridOptionsWrapper.gridOptions.enableRangeSelection = true;
-                        e.api.gridOptions.api.gridOptionsWrapper.gridOptions.enableClipboard = true;
-                    }
-                    """)
-                ],
-                enableRangeSelection=True,
-                enableRowSelection=True,
-                rowSelection='multiple',
-                suppressRowClickSelection=False,
-            )
-
-            # csv = df_test.to_csv(index=False).encode('utf-8')
-            # st.download_button(
-            # label="Download Data as CSV",
-            # data=csv,
-            # file_name="test_time_by_test.csv",
-            # mime="text/csv",
-            # key="test_time_by_test_download_btn"
-            # )
-
+        if not has_query_params:
+            st.info("No query parameters provided. Please select filters above.")
         else:
-            st.info("No filtered data available. Query data above to view state-wise test time.")
+            df_state = load_merged_test_time_by_state_detail().copy()
+            # st.write(f"Filtering {attr_1} in {val_1}, remaining rows: {len(df_state)}")
+            # st.write(df_state.columns)
+
+            if attr_1 and val_1 and "" not in val_1 and attr_1 in df_state.columns:
+                df_state = df_state[df_state[attr_1].astype(str).isin(val_1)]
+                st.write(f"Filtering {attr_1} in {val_1}, remaining rows: {len(df_state)}")
+            if attr_2 and val_2 and "" not in val_2 and attr_2 in df_state.columns:
+                df_state = df_state[df_state[attr_2].astype(str).isin(val_2)]
+            if attr_3 and val_3 and "" not in val_3 and attr_3 in df_state.columns:
+                df_state = df_state[df_state[attr_3].astype(str).isin(val_3)]
+
+            if edited_df is not None and not edited_df.empty and len(edited_df) > 0:
+                # Remove rows matching
+                for _, row in edited_df.iterrows():
+                    sn = str(row.get("SERIAL_NUM", "")).strip()
+                    ts = str(row.get("TRANS_SEQ", "")).strip()
+                    if sn and ts:
+                        df_state = df_state[~((df_state['SERIAL_NUM'].astype(str) == sn) & (df_state['TRANS_SEQ'].astype(str) == ts))]
+
+            c1_tt, c2_tt, c3_tt = st.columns(3)
+            with c1_tt:
+                filter_text_tt_op_tt = st.text_input(
+                "Filter Text Box",
+                "",
+                placeholder="Search in all columns...",
+                key="filter_text_tt_op_tt_test"
+                )
+
+            with c2_tt:
+                logic_tt = st.radio(
+                "Search Mode",
+                ["OR", "AND"],
+                horizontal=True,
+                help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
+                key="logic_tt_test"
+                
+            )
+                
+            with c3_tt:
+                avg_mode = st.radio(
+                "Avg Mode",
+                ["Normal", "Weighted"],
+                horizontal=True,
+                help="Normal: Regular average | Weighted: Weighted average based on counts",
+                key="avg_mode_test"
+                
+            )
+
+            group_cols_cnt =  ["SERIAL_NUM", "TRANS_SEQ", "OPERATION", "GROUP_NAME"]
+            df_cnt = df_state.groupby(group_cols_cnt, dropna=False).agg(N=('SERIAL_NUM', 'size')).reset_index()
+            total_rows = len(df_cnt)
+            print(f"[summary] Total rows in df_cnt: {total_rows}")
+
+            group_cols_opr_cnt = ["OPERATION", "GROUP_NAME"]
+            df_opr_cnt = df_cnt.groupby(group_cols_opr_cnt, dropna=False).agg(OPER_CNT=('SERIAL_NUM', 'size')).reset_index()
+
+            df_state = apply_filter(
+                df_state,
+                filter_text_tt_op_tt,
+                logic_tt,
+                ["program", "config", "pco", "STATE_NAME", "OPERATION"],
+            )
+
+
+            if not df_state.empty:
+
+                # Group by state and calculate mean and count
+                if "STATE_NAME" in df_state.columns and len(m_select_col) > 1:
+
+                    
+                    df_state = pd.merge(df_state, df_opr_cnt, on=["OPERATION", "GROUP_NAME"], how="left")
+                    state_summary = df_state.pivot_table(
+                        index=[ "OPERATION", "STATE_NAME"],
+                        columns=["pco",], #"program","pco", "config"
+                        values=["TestTime(hrs)", "N", 'OPER_CNT',"SERIAL_NUM"],
+                        aggfunc={"TestTime(hrs)": "mean", "N": "sum", 'OPER_CNT': 'mean', "SERIAL_NUM": "size"},
+                        fill_value=0
+                    ).reset_index() 
+
+                    # st.write(state_summary.columns)
+                    # st.write(state_summary)
+
+                    if avg_mode == "Weighted":
+                        state_summary['TestTime(hrs)'] = (state_summary['TestTime(hrs)']  * state_summary['SERIAL_NUM']) / state_summary['OPER_CNT'].replace(0, np.nan)  # avoid division by zero
+                        state_summary['N'] = state_summary['OPER_CNT'].replace(0, np.nan).round().astype("Int64")
+
+                    state_summary = state_summary.drop(columns=['OPER_CNT', 'SERIAL_NUM'])
+
+                    # Flatten MultiIndex columns into readable single-level names
+                    def _flatten(col):
+                        if not isinstance(col, tuple):
+                            return col
+                        parts = [str(p) for p in col if p not in ("", None)]
+                        return "_".join(parts)
+                    state_summary.columns = [_flatten(c) for c in state_summary.columns]
+
+                    column_order = getPCOColumnOrder()
+                    
+                    cols = state_summary.columns.tolist()
+                    if len(column_order) == 2 and len(cols) >= 6:
+                        # Reorder TestTime and N columns based on column_order
+                        if column_order[0] not in cols[2]:
+                            cols[2], cols[3],cols[4], cols[5]  = cols[3], cols[2], cols[5], cols[4]
+                            state_summary = state_summary[cols]
+
+                    fixed = ["OPERATION", "STATE_NAME"]
+                    value_cols = [c for c in state_summary.columns if c not in fixed]
+
+                    # Separate TestTime and N columns by prefix after flattening
+                    tt_cols = [c for c in value_cols if c.startswith("TestTime(hrs)_")]
+                    n_cols = [c for c in value_cols if c.startswith("N_")]
+
+                    # Reorder columns: fixed + test time + counts
+                    state_summary = state_summary[fixed + tt_cols + n_cols]
+
+                    # If exactly two TestTime columns, compute diff (first minus second)
+                    if len(tt_cols) == 2:
+                        state_summary["diff_TestTime(hrs)"] = state_summary[tt_cols[0]] - state_summary[tt_cols[1]]
+                    elif len(tt_cols) > 2:
+                        st.info("More than two TestTime groups present; diff not computed.")
+
+                    # Ensure custom order is applied to OPERATION column and sort by STATE_NAME
+                    custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+                    if "OPERATION" in state_summary.columns:
+                        state_summary["OPERATION"] = pd.Categorical(
+                            state_summary["OPERATION"], categories=custom_order, ordered=True
+                        )
+                    if "STATE_NAME" in state_summary.columns:
+                        state_summary = state_summary.sort_values(by=["OPERATION", "STATE_NAME"])
+
+                    # Display the summary table
+                    # Round floating point (TestTime and diff) to 2 decimals
+                    float_like_cols = [c for c in state_summary.columns if c.startswith("TestTime(hrs)_") or c.startswith("diff_TestTime(hrs)")]
+                    for c in float_like_cols:
+                        if c in state_summary.columns:
+                            state_summary[c] = pd.to_numeric(state_summary[c], errors='coerce').round(2)
+
+                    # Add TOTAL row summing numeric columns of current display
+                    fixed = ["program", "OPERATION", "STATE_NAME"]
+                    numeric_cols = [c for c in state_summary.columns if c not in fixed and pd.api.types.is_numeric_dtype(state_summary[c])]
+                    if numeric_cols:
+                        total_row = {col: state_summary[col].sum() for col in numeric_cols}
+                        total_row.update({ "OPERATION": "ALL", "STATE_NAME": "ALL"})
+                        state_summary = pd.concat([state_summary, pd.DataFrame([total_row])], ignore_index=True)
+                        # Re-round float columns for consistency
+                        for c in float_like_cols:
+                            if c in state_summary.columns:
+                                state_summary[c] = pd.to_numeric(state_summary[c], errors='coerce').round(2)
+
+                    # Display with st.dataframe (no row-level bold styling available); TOTAL row identifiable by ALL values
+                    def highlight_last_row(row):
+                        if row.name == len(state_summary) - 1:  # last row
+                            return ['font-weight: bold; color: Black;'] * len(row)
+                        return [''] * len(row)
+
+                    # column_order = getPCOColumnOrder()
+                    # if len(column_order) == 2:
+                    #     cols = state_summary.columns.tolist()
+                    #     # Reorder TestTime and N columns based on column_order
+                    #     if column_order[0] not in cols[2]:
+                    #         cols[2], cols[3],cols[4], cols[5]  = cols[3], cols[2], cols[5], cols[4]
+                    #         state_summary = state_summary[cols]
+                            
+                    styled = state_summary.style.apply(highlight_last_row, axis=1)
+
+                    col_widths = {col: {"width": 120, 'help': col} for col in state_summary.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
+
+                    st.dataframe(styled, use_container_width=True, column_config=col_widths, height=15*32)
+
+                elif m_select_col is not None and len(m_select_col) == 1 and m_select_col[0] in df_dist.columns:
+                    color_arg = m_select_col[0]
+
+                    state_summary = df_state.pivot_table(
+                        index=[ "OPERATION", "STATE_NAME"],
+                        columns= m_select_col[0], #"program","pco", "config"
+                        values=["TestTime(hrs)", "N"],
+                        aggfunc={"TestTime(hrs)": "mean", "N": "sum"},
+                        fill_value=0
+                    ).rename(columns={"N": "RecordCount"}, level=0).reset_index()
+
+                    
+                    state_summary = state_summary[
+                        ["OPERATION", "STATE_NAME", "TestTime(hrs)", "RecordCount"]
+                    ]
+
+
+                    #st.dataframe(state_summary, use_container_width=True, column_config=col_widths, height=15*32)
+                    st.dataframe(state_summary, use_container_width=True, height=15*32)
+
+                else:
+                    st.warning("The dataset does not contain a 'STATE' column.")
+            else:
+                st.info("No filtered data available. Query data above to view state-wise test time.")
+
+            csv = df_state.to_csv(index=False).encode('utf-8')
+            st.download_button(
+            label="Download Data as CSV",
+            data=csv,
+            file_name="test_time_by_state.csv",
+            mime="text/csv",
+            key="test_time_by_state_download_btn"
+            )
+
+            plot_graph = st.checkbox("Plot Graph", value=False)
+
+
+            # Use filtered data if available
+            if not df_state.empty and len(df_state) < 2500 and plot_graph:
+                st.write(f"Generating distribution chart for {len(df_state)} rows.")
+                df_dist = df_state.copy()
+
+                df_dist['OP_STATE'] = df_dist['OPERATION'].astype(str) + " - " + df_dist['STATE_NAME'].astype(str)
+                
+                # Ensure numeric TEST_TIME (already converted to hours earlier, but reconvert safely)
+
+
+                if "TEST_TIME" not in df_dist.columns:
+                    df_dist['TEST_TIME'] = pd.to_numeric(df_dist['TestTime(hrs)'], errors='coerce').fillna(0)
+                    
+
+                df_dist['TEST_TIME'] = pd.to_numeric(df_dist['TEST_TIME'], errors='coerce')
+                if "TEST_TIME_org" not in df_dist.columns:
+                    df_dist['TEST_TIME_org'] = pd.to_numeric(df_dist['TEST_TIME'], errors='coerce').fillna(0)
+                    df_dist['TEST_TIME'] = df_dist['TEST_TIME_org']     
+                df_dist = df_dist.dropna(subset=['TEST_TIME'])
+
+
+
+
+                hover_cols = [c for c in ["SERIAL_NUM", "TRANS_SEQ"] if c in df_dist.columns]
+                # st.write(f"Hover columns: {hover_cols}")
+                # st.write(f"Hover columns: {df_dist.columns}")
+
+                # Add a selectbox to choose what to plot on x-axis
+
+                plot_list = ["OP_STATE", "CMS_CONFIG", "NUM_HEADS", "CAPACITY", "HEAD", "PN3", 
+                    "IR_DRIVE", "POWER_LOSS_DRIVE", "WAFER_TYPE", "HGA_SORT_06", "CAL2_FPW", "SBR", "STATE_NAME","GROUP_NAME", 'config']
+                
+                plot_by = m_select_col[0] if m_select_col is not None and len(m_select_col) == 1 and m_select_col[0] in df_dist.columns else "OP_STATE"
+                # plot_by = st.selectbox(
+                #     "Plot by",
+                #     plot_list,
+                #     index=0,
+                #     key="plot_by_state_chart"
+                # )
+
+                # Default plot settings (no user controls): Violin chart, color by pco if available, linear scale, no clipping
+                chart_type = "Violin"
+                # Set color based on plot_by selection
+                # If plotting by OP_STATE, color by pco; otherwise color by plot_by column
+                if plot_by == "OP_STATE":
+                    color_arg = "pco" if "pco" in df_dist.columns else None
+                else:
+                    color_arg = plot_by if plot_by in df_dist.columns else None
+                y_scale = "linear"
+
+                # Create the appropriate column based on selection
+                if plot_by == "OP_STATE":
+                    df_dist['plot_column'] = df_dist['OPERATION'].astype(str) + " - " + df_dist['STATE_NAME'].astype(str)
+                elif plot_by in plot_list:
+                    df_dist['plot_column'] = df_dist[plot_by].astype(str) if plot_by in df_dist.columns else "Unknown"
+                if df_dist.empty or ("plot_column" not in df_dist.columns):
+                    st.warning("No data remains for selected filters / clip range.")
+                    st.write(df_dist.columns)
+                    st.write(len(df_dist))
+                    st.write(("plot_column" not in df_dist.columns))
+                    st.write(df_dist.empty )
+                    st.stop()
+                if chart_type == "Strip (Jitter)":  # unreachable with default violin but kept for easy future toggle
+                    # Manual jitter using scatter since px.strip doesn't support 'jitter' kwarg in current Plotly version
+                    # Map OPERATION categories to numeric positions then add random noise
+                    if "plot_column" in df_dist.columns:
+                        # Use only present operation categories for jitter mapping
+                        op_categories = list(df_dist['plot_column'].cat.categories if isinstance(df_dist['plot_column'], pd.Categorical) else list(df_dist['plot_column'].unique()))
+                        op_index_map = {op: i for i, op in enumerate(op_categories)}
+                        df_dist['_op_x'] = df_dist['plot_column'].map(op_index_map).astype(float)
+                        # Add jitter within +/-0.3 range
+                        rng = np.random.default_rng(seed=42)  # deterministic for reproducibility per rerun
+                        df_dist['_op_x_jitter'] = df_dist['_op_x'] + rng.uniform(-0.3, 0.3, size=len(df_dist))
+                        fig = px.scatter(
+                            df_dist,
+                            x="_op_x_jitter",
+                            y="TEST_TIME",
+                            color=color_arg,
+                            hover_data=hover_cols + plot_by,
+                        )
+                        # Replace numeric axis ticks with category labels
+                        fig.update_xaxes(
+                            tickmode='array',
+                            tickvals=list(range(len(op_categories))),
+                            ticktext=op_categories,
+                            title_text="State Name"
+                        )
+                    else:
+                        fig = px.scatter(df_dist, y="TEST_TIME", color=color_arg, hover_data=hover_cols)
+                elif chart_type == "Box":
+                    fig = px.box(
+                        df_dist,
+                        x="plot_column",
+                        y="TEST_TIME",
+                        color=color_arg,
+                        hover_data=hover_cols,
+                    )
+                    if "plot_column" in df_dist.columns and isinstance(df_dist['plot_column'], pd.Categorical):
+                        fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['plot_column'].cat.categories))
+                else:  # Violin
+                    
+                    fig = px.violin(
+                        df_dist,
+                        x="plot_column",
+                        y="TEST_TIME",
+                        color=color_arg,
+                        hover_data=hover_cols,
+                        box=True,
+                        points="all"
+                    )
+
+                    fig = add_violin_labels(
+                        fig,
+                        df=df_dist,
+                        x_col="plot_column",
+                        y_col="TEST_TIME",
+                        color_col=color_arg,
+                        label_metric="mean",  # or "mean"
+                    )
+                    if "plot_column" in df_dist.columns and isinstance(df_dist['plot_column'], pd.Categorical):
+                        fig.update_xaxes(categoryorder='array', categoryarray=list(df_dist['plot_column'].cat.categories))
+
+                fig.update_layout(
+                    dragmode="select",  # Default to user selection mode
+                    yaxis_title="Test Time (hours)",
+                    xaxis_title=color_arg,
+                    yaxis_type=y_scale,
+                    legend_title=(color_arg),
+                    margin=dict(l=10, r=10, t=40, b=10)
+                )
+                event_state = st.plotly_chart(fig, use_container_width=True,key="violin_state",on_select="rerun")
+                st.caption(f"Distribution of TEST_TIME across selected operations and filters.")
+
+                pts_state = event_state.selection.points  # Streamlit PlotlySelectionState.points :contentReference[oaicite:2]{index=2}
+
+                # Extract SN, TS, OPER, Test Time, Group_Name from pts
+                if pts_state:
+                    st.write("Total selected points:", len(pts_state))
+                    violin_points_data = []
+                    for pt in pts_state:
+                        SN = pt.get("customdata", [None, None])[0]
+                        TS = pt.get("customdata", [None, None])[1]
+                        OPER = pt.get("x")
+                        OPER2 = pt.get("x")
+                        Test_Time = pt.get("y")
+                        Group_Name = pt.get("legendgroup")
+                        violin_points_data.append({
+                        "SN": SN,
+                        "TS": TS,
+                        f"{color_arg}_1": OPER.split(" - ")[0] if " - " in OPER else OPER,  # extract state name if OP_STATE format
+                        "Group_Name": Group_Name,                    
+                        f"{color_arg}_2": OPER.split(" - ")[1] if " - " in OPER else OPER,  # extract state name if OP_STATE format                    
+                        "Test Time": Test_Time
+
+                        })
+                    violin_points_df = pd.DataFrame(violin_points_data)
+                    # Set fixed width for columns in violin_points_df display
+                    col_widths = {col: {"width": 120} for col in violin_points_df.columns}
+                    if len(violin_points_df.columns) > 0:
+                        last_col = violin_points_df.columns[-1]
+                        col_widths[last_col] = {"width": 240}
+                    # Add index column starting from 1
+                    violin_points_df.index = violin_points_df.index + 1
+                    violin_points_df.reset_index(inplace=True)
+                    violin_points_df.rename(columns={"index": "No."}, inplace=True)
+                    st.dataframe(violin_points_df, use_container_width=False, column_config=col_widths, height=8*32, hide_index=True)
+            else:
+                st.info("No filtered data available. Query data above to view distribution.")
+        
+            with st.expander("Test Time By Category", expanded=False):    # Test Time By Category
+                plot_graph_ttbc = st.checkbox("Plot Graph Test Time By Category", value=False)
+
+                if plot_graph_ttbc:                
+                    # Copy df_state 
+                    df_raw_state = df_state.copy()
+
+                    if "OPER_CNT" in df_raw_state.columns:
+                        df_raw_state = df_raw_state.pivot_table(
+                            index=["OPERATION", "STATE_NAME", "GROUP_NAME", "OPER_CNT"],
+                            aggfunc={"TestTime(hrs)": "mean", "SERIAL_NUM": "size"},
+                        ).reset_index() 
+
+                        # force to weighted 
+                        if avg_mode == "Weighted":
+                            df_raw_state['TestTime(hrs)'] = (df_raw_state['TestTime(hrs)']  * df_raw_state['SERIAL_NUM']) / df_raw_state['OPER_CNT'].replace(0, np.nan)  # avoid division by zero
+                    else:
+                        df_raw_state = df_raw_state.pivot_table(
+                            index=["OPERATION", "STATE_NAME", "GROUP_NAME"],
+                            aggfunc={"TestTime(hrs)": "mean", "SERIAL_NUM": "size"},
+                        ).reset_index()
+                    # st.write(df_raw_state)
+                    st.write(test_group_folder)
+
+                    df_dorado_all_state = pd.read_csv(test_group_folder)
+                    join_test_group_result = pd.merge(df_raw_state, df_dorado_all_state, on=['OPERATION' , 'STATE_NAME'], how='left')
+                    join_test_group_result['Test Group'] = join_test_group_result['Test Group'].fillna('UNKNOW')
+
+
+                    st.write(f"Raw State {len(df_raw_state.index)} row, Dorado All State {len(df_dorado_all_state)} row, Raw State After Join {len(join_test_group_result)} row.")
+
+                    # st.write(df_dorado_all_state)
+                    # st.write(join_test_group_result)
+
+                    # join_test_group_result = join_test_group_result.pivot_table(
+                    #     index=[ "Test Group" ],
+                    #     columns=["GROUP_NAME",],
+                    #     values=["TestTime(hrs)", "STATE_NAME"],
+                    #     aggfunc={"TestTime(hrs)": "sum", "STATE_NAME": "size"},
+                    #     fill_value=0
+                    # ).reset_index()
+                    # st.write(join_test_group_result)
+
+                    
+                    df_tt_by_category = join_test_group_result.pivot_table(
+                        index=["Test Group"],
+                        columns=["GROUP_NAME"],
+                        values=["TestTime(hrs)", "STATE_NAME"],
+                        aggfunc={"TestTime(hrs)": "sum", "STATE_NAME": "size"},
+                        fill_value=0,
+                        sort=False
+                    )
+
+
+
+                    chart_ttbc = df_tt_by_category.copy()
+
+                    metrics = list(dict.fromkeys(df_tt_by_category.columns.get_level_values(0)))
+                    groups  = list(dict.fromkeys(df_tt_by_category.columns.get_level_values(1)))
+
+                    for m in metrics:
+                        df_tt_by_category[(m, "sum")] = df_tt_by_category[m].sum(axis=1)
+
+                    base_groups = [g for g in groups if g != "sum"]
+                    swapped_groups = base_groups[::-1]
+
+                    metric_order = ["TestTime(hrs)", "STATE_NAME"]
+
+                    new_cols = []
+                    for m in metric_order:
+                        for g in swapped_groups:
+                            new_cols.append((m, g))
+                        new_cols.append((m, "sum"))
+
+                    df_tt_by_category = df_tt_by_category.reindex(columns=pd.MultiIndex.from_tuples(new_cols))
+                    df_tt_by_category.loc["Total"] = df_tt_by_category.sum()
+                    df_tt_by_category = df_tt_by_category.reset_index()
+                    st.write(df_tt_by_category)
+
+                    # Download Data After join
+                    df_tt_by_category_csv = df_tt_by_category.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="Download Data as CSV",
+                        data=df_tt_by_category_csv,
+                        file_name="df_tt_by_category.csv",
+                        mime="text/csv",
+                        key="df_tt_by_category_download_btn"
+                    )
+
+
+                
+                    groups_order = swapped_groups
+                    x_order = list(chart_ttbc.index)
+
+                    # bar chart TestTime(hrs)
+                    df_tt = (chart_ttbc["TestTime(hrs)"].reset_index().melt(id_vars="Test Group", var_name="GROUP_NAME", value_name="TestTime(hrs)"))
+
+                    fig_tt = px.bar(
+                        df_tt,
+                        x="Test Group", y="TestTime(hrs)",
+                        color="GROUP_NAME",
+                        barmode="group",
+                        category_orders={"GROUP_NAME": groups_order, "Test Group": x_order},
+                        title="TestTime(hrs) by Test Group and GROUP_NAME"
+                    )
+                    st.plotly_chart(fig_tt, use_container_width=True)
+
+                    # # bar chart STATE_NAME
+                    # df_sn = (chart_ttbc["STATE_NAME"].reset_index().melt(id_vars="Test Group", var_name="GROUP_NAME", value_name="STATE_NAME"))
+
+                    # fig_sn = px.bar(
+                    #     df_sn,
+                    #     x="Test Group", y="STATE_NAME",
+                    #     color="GROUP_NAME",
+                    #     barmode="group",
+                    #     category_orders={"GROUP_NAME": groups_order, "Test Group": x_order},
+                    #     title="STATE_NAME (count) by Test Group and GROUP_NAME"
+                    # )
+                    # st.plotly_chart(fig_sn, use_container_width=True)
 
 def TestTime_Hist_block(title, df, groupby_cols=None):
     
@@ -2433,6 +2280,7 @@ def TestTime_Hist_block(title, df, groupby_cols=None):
 
 
         st.dataframe(df_f, use_container_width=True, height=15*32)
+
 def load_test_time_hist_info():
     
     hist_fil = config.QUERY_REQUEST_LOG_FILE_HISTORY
@@ -2448,10 +2296,7 @@ def load_test_time_hist_info():
     else:
         st.info(f"No historical test time data found at {hist_fil}")
         return pd.DataFrame()
-    
-
-
-
+ 
 def extract_dict_from_test_parameters(tp) -> dict:
 
     if tp is None or (isinstance(tp, float) and np.isnan(tp)):
@@ -2483,7 +2328,6 @@ def extract_dict_from_test_parameters(tp) -> dict:
             return {}
     return {}
 
-
 def build_compare_table(d1: dict, d2: dict, name1: str, name2: str, tt1: str, tt2: str) -> pd.DataFrame:
     df_test_time = pd.DataFrame({
         "PARAMETERS": ["TEST_TIME_HR"],
@@ -2499,7 +2343,6 @@ def build_compare_table(d1: dict, d2: dict, name1: str, name2: str, tt1: str, tt
     df = pd.concat([df_test_time, df_parameters], ignore_index=True)
     return df
 
-
 def build_ttp_table(d1: dict, name1: str, tt1: str) -> pd.DataFrame:
     df_test_time = pd.DataFrame({
         "PARAMETERS": ["TEST_TIME_HR"],
@@ -2513,211 +2356,511 @@ def build_ttp_table(d1: dict, name1: str, tt1: str) -> pd.DataFrame:
     df = pd.concat([df_test_time, df_parameters], ignore_index=True)
     return df
 
+with st.expander("Test Time By Test", expanded=False):
+    checklist_tt_by_test = st.checkbox("Show Test Time By Info", value=False)
+    if checklist_tt_by_test:
+        st.markdown('<div class="section-title">Test Time By Test</div>', unsafe_allow_html=True)
 
-with st.expander("Test Time By Test Parameter", expanded=False):
-    st.markdown('<div class="section-title">Test Time By Test Parameter</div>', unsafe_allow_html=True)
+        if not has_query_params:
+            st.info("No query parameters provided. Please select filters above.")
+        else:
+            df_test = load_merged_test_time_by_test().copy()
 
-    # if not has_query_params:
-    # force condition
-    df_test_parameter = load_merged_test_time_by_test_parm().copy()
-    group_name_list = df_test_parameter["GROUP_NAME"].dropna().unique().tolist()
-    st.write(f"Total rows before filter: {len(df_test_parameter)}")
-    if df_test_parameter.empty:
-        st.info("No data available. Please run query to load data.")
-    else:
-
-        c1_tt, c2_tt, c3_tt = st.columns(3)
-        col_alias = {
-            "STATE": "STATE_NAME",
-            "OP": "OPERATION",
-            "PARM": "PARAMETER_NAME",
-            "TEST": "TEST_NUMBER",
-        }
-        with c1_tt:
-            filter_text_tt_op_tt_detail = st.text_input(
-            "Filter Text Box",
-            "",
-            placeholder="Search in all columns...",
-            help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP TEST:275\n- [STATE:STATE_NAME, OP:OPERATION, PARM:PARAMETER_NAME, TEST:TEST_NUMBER]",
-            key="filter_text_tt_op_tt_detail"
-            )
-
-            
-        with c2_tt:
-            logic_tt_op_tt_detail = st.radio(
-            "Search Mode",
-            ["AND","OR"],
-            horizontal=True,
-            help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
-            key="logic_tt_op_tt_detail"
-            )
-
-        df_test = apply_filter_flex(
-            df_test_parameter,
-            filter_text_tt_op_tt_detail,
-            logic_tt_op_tt_detail,
-            [ "OPERATION", "STATE_NAME", 'TEST_NUMBER', 'PARAMETER_NAME', 'SPC_ID'],
-            col_alias=col_alias
-        )
-
-        with c3_tt:
-            st.success(f"Filtered rows: {len(df_test)}")
-
-        if len(df_test) > 3000:
-            st.warning("Too many rows after filtering. Please refine your filter to less than 3000 rows for better performance.")
-            st.stop()
-        
-        column_order = getPCOColumnOrder()
-        KEY_COLS = ["OPERATION", "STATE_NAME", "PARAMETER_NAME", "TEST_NUMBER", "SPC_ID"]
-        SHOW_COLS = ["check","STATE_NAME", "PARAMETER_NAME", "SPC_ID" ,"TEST_TIME_HR" ,"TEST_PARAMETERS"]
-
-        def flatten_columns(df: pd.DataFrame) -> pd.DataFrame:
-            if isinstance(df.columns, pd.MultiIndex):
-                df = df.copy()
-                df.columns = [
-                    "_".join([str(x) for x in col if x not in (None, "", "nan")]).strip("_")
-                    for col in df.columns
-                ]
-            return df
-
-        if not df_test.empty:
-            
-
-            df_test_parameter_full_data = df_test.copy()
-
-            df_test_parameter_pivot = df_test.pivot_table(
-                index=KEY_COLS,
-                columns=["GROUP_NAME"],
-                values=[ "TEST_TIME_HR","TEST_PARAMETERS"],
-                aggfunc={"TEST_TIME_HR": "sum", "TEST_PARAMETERS": "size"},
-                fill_value=0
-            )
-           
-            # Order Col
-            metric_order = ["TEST_TIME_HR", "TEST_PARAMETERS"]
-            group_order = getPCOColumnOrder()
-
-            new_cols = [
-                (metric, grp)
-                for metric in metric_order
-                for grp in group_order
-                if (metric, grp) in df_test_parameter_pivot.columns
-            ]
-
-            df_test_parameter_pivot = df_test_parameter_pivot.loc[:, new_cols]
-
-            df_test_parameter_pivot = df_test_parameter_pivot.rename(
-                columns={
-                    "TEST_TIME_HR": "TestTime(Hrs.)",
-                    "TEST_PARAMETERS": "Count"
-                },
-                level=0
-            )
-
-
-            # Display Main Table
-            selection = st.dataframe(
-                df_test_parameter_pivot, 
-                on_select="rerun",  # Triggers app rerun on selection
-                selection_mode="multi-row"  # Can also be "single-row"
-            )
-
-            selected_rows = df_test_parameter_pivot.copy().reset_index().iloc[selection.selection.rows]
-            st.write(f"Selected {len(selected_rows)} rows.")
-
-
-            if len(selected_rows) == 0:
-                st.info("Please select row.")
-            else:
-                # remove duplicates rows
-                # st.write(f"Selected rows before removing duplicates: {(selection)}")
-                # st.write(selected_rows)
-
-                df_selected = flatten_columns(selected_rows)
-                selected_keys = df_selected[KEY_COLS].drop_duplicates()
-
-                filtered_full = df_test_parameter_full_data.merge(
-                    selected_keys,
-                    on=KEY_COLS,
-                    how="inner"
+            c1_tt, c2_tt, c3_tt, c4_tt = st.columns(4)
+            col_alias = {
+                "STATE": "STATE_NAME",
+                "OP": "OPERATION",
+                "PARM": "PARAMETER_NAME",
+                "TEST": "TEST_NUMBER",
+            }
+            with c1_tt:
+                filter_text_tt_op_tt = st.text_input(
+                "Filter Text Box",
+                "",
+                placeholder="Search in all columns...",
+                help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP TEST:275\n- [STATE:STATE_NAME, OP:OPERATION, PARM:PARAMETER_NAME, TEST:TEST_NUMBER]",
+                key="filter_text_tt_op_tt"
                 )
 
-                # debug
-                # st.write(selected_keys)
-                # st.write(filtered_full)
+            with c2_tt:
+                view_type = st.selectbox(
+                    "View Type",
+                    ["By Test", "By Oper"],
+                    index=0,
+                    help="Choose how to group the test time data.",
+                    key="view_type_tt_by_test"
+                )
+                
+            with c3_tt:
+                logic_tt_op_tt = st.radio(
+                "Search Mode",
+                ["OR", "AND"],
+                horizontal=True,
+                help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
+                key="logic_tt_op_tt"
+                
+                )
 
-                if "check" not in filtered_full.columns:
-                    filtered_full.insert(0, "check", False)
+            with c4_tt:
+                avg_mode_tt_op_tt = st.radio(
+                "Avg Mode",
+                ["Normal", "Weighted"],
+                horizontal=True,
+                help="Normal: Regular average | Weighted: Weighted average",
+                key="avg_mode_tt_op_tt"
+                
+                )
+
+            df_test = apply_filter_flex(
+                df_test,
+                filter_text_tt_op_tt,
+                logic_tt_op_tt,
+                [ "STATE_NAME", "OPERATION", 'TEST_NUMBER', 'PARAMETER_NAME'],
+                col_alias=col_alias
+            )
+
+            st.write(f"Filtered rows: {len(df_test)}")
+            
+            if not df_test.empty and len(df_test) < 3000:
+
+                # Example: group by a column that exists, e.g. 'OPERATION' or 'STATE_NAME'
+                total_group_operation = df_test.groupby(["pco", "config"]).size().reset_index(name='count')
+                total_group_operation['GROUP_NAME'] = total_group_operation['pco'] + "_" + total_group_operation['config']
+                group_name_list = total_group_operation['GROUP_NAME'].tolist()
+
+                #st.write("all operations mmm:", group_name_list)
+                # column_order = getPCOColumnOrder()
+                # df_test["pco"] = pd.Categorical(df_test["pco"], categories=column_order, ordered=True)
+                if avg_mode_tt_op_tt == "Weighted":
+                    if "TestTime(hrs)_wgt" in df_test.columns:
+                        df_test["TestTime(hrs)"] = df_test["TestTime(hrs)_wgt"]
+                        df_test["N"] = df_test["OPER_CNT"]
+                    else:
+                        st.warning("Weighted average column 'TestTime(hrs)_wgt' not found. Using unweighted 'TestTime(hrs)' instead.")
+                tt_summary = df_test.pivot_table(
+                        index=['TEST_NUMBER', 'PARAMETER_NAME',"STATE_NAME", "OPERATION"],
+                        columns=["pco", "config"],
+                        values=["TestTime(hrs)", "N"],
+                        aggfunc={"TestTime(hrs)": "sum", "N": "sum"},
+                        fill_value=0
+                    ).reset_index()
+
+                # ---------------- Build AgGrid options ----------------
+                tt_summary.columns = [
+                    "_".join([str(c) for c in col]).strip("_") if isinstance(col, tuple) else col
+                    for col in tt_summary.columns
+                ]
+
+                # Replace column names containing 'TestTime(hrs)_' with ''
+                tt_summary.columns = [
+                    col.replace('TestTime(hrs)_', 'TT_') if isinstance(col, str) else col
+                    for col in tt_summary.columns
+                ]
+
+                cols = tt_summary.columns.tolist()
+                if len(cols) >= 8:
+                    column_order = getPCOColumnOrder()
+                
+                    cols[4], cols[5],cols[6], cols[7]  = cols[6], cols[7], cols[4], cols[5]
+                    tt_summary = tt_summary[cols]
+                    #st.write("Column order:", column_order, len(column_order)) 
+                    if len(column_order) == 2:
+                        cols = tt_summary.columns.tolist()
+                        # Reorder TestTime and N columns based on column_order
+                        #st.write("Columns before reordering:", cols, column_order)
+                        if column_order[0] not in cols[4]:
+                            #st.write("Reordering columns for display...")
+                            cols[4], cols[5],cols[6], cols[7]  = cols[5], cols[4], cols[7], cols[6]
+                            tt_summary = tt_summary[cols]
+
+                    cols = tt_summary.columns.tolist()     
+                    test_time_cols = [c for c in tt_summary.columns if c.startswith("TT_")]
+                    if len(test_time_cols) == 2:
+                        tt_summary["TT_Diff"] = tt_summary[test_time_cols[0]] - tt_summary[test_time_cols[1]]
+
+                custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+
+                # 2) Build AgGrid options
+                gb = GridOptionsBuilder.from_dataframe(tt_summary)
+
+                gb.configure_column(
+                    "OPERATION",
+                    sortingOrder=["asc"],
+                    comparator=f"""
+                    function(a, b) {{
+                        const order = {custom_order};
+                        return order.indexOf(a) - order.indexOf(b);
+                    }}
+                    """
+                )            
+
+                # group by TEST_NUMBER (now a plain string column name)
+                if view_type == "By Test":
+                    gb.configure_column("TEST_NUMBER", rowGroup=True, hide=True)
+                    gb.configure_column("PARAMETER_NAME", rowGroup=True, hide=True)
+                elif view_type == "By Oper":
+                    gb.configure_column("OPERATION", rowGroup=True, hide=True)
+                    gb.configure_column("TEST_NUMBER", rowGroup=True, hide=True)
+
+                try:
+                    if len(test_time_cols) == 2:
+                        gb.configure_column('TT_Diff', aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
+                except:
+                    pass
+                # Aggregation for numeric columns when grouped
+                for col in group_name_list:
+                    gb.configure_column('TT_' + col, aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
+                    gb.configure_column('N_' + col, aggFunc="sum", type=["numericColumn", "customNumericFormat"], valueFormatter="x.toFixed(2)")
 
 
-                # GROUP_NAME
-                if "GROUP_NAME" not in filtered_full.columns:
-                    st.warning("Can not find columns GROUP_NAME in dataframe.")
-                    st.dataframe(filtered_full, width="stretch")
-                else:
-                    groups = list(filtered_full["GROUP_NAME"].dropna().unique())
+                # General grid options
+                gb.configure_grid_options(
+                    groupDisplayType="multipleColumns",  # show group columns instead of hiding
+                    groupDefaultExpanded=0,              # 0 = collapsed, -1 = fully expanded
+                    animateRows=True,
+                    suppressAggFuncInHeader=False,
+                )
 
-                    if len(groups) == 0:
-                        st.warning("No GROUP_NAME")
-                        st.dataframe(filtered_full, width="stretch")
+                #grid_options = gb.build()
 
-                    elif len(groups) == 1:
-                        st.subheader(f"Group: {groups[0]}")
-                        # st.dataframe(
-                        #     filtered_full[filtered_full["GROUP_NAME"] == groups[0]],
-                        #     width="stretch"
-                        # )
-                        df_g1 = filtered_full[filtered_full["GROUP_NAME"] == groups[0]][SHOW_COLS].copy()
-                        default_value = len(df_g1) == 1
-                        df_g1 = df_g1.assign(check=default_value)
-                        edited_parameter1 = st.data_editor(
-                            df_g1,
-                            width="stretch",
-                            hide_index=True,
-                            column_config={
-                                "check": st.column_config.CheckboxColumn(
-                                    "check",
-                                    help="select row for compare parameter.",
-                                    default=False,
-                                )
-                            },
-                            key="parameter1_selector",
+                # ---------------- Render AgGrid ----------------
+                # grid_response = AgGrid(
+                #     tt_summary,
+                #     gridOptions=grid_options,
+                #     enable_enterprise_modules=True,
+                #     update_mode=GridUpdateMode.NO_UPDATE,
+                #     fit_columns_on_grid_load=True,
+                #     height=25*32,
+                # ) 
+
+                # Autosize columns after grid loads
+
+                # This JS code will autosize all columns after grid is ready
+                auto_size_js = JsCode("""
+                function(e) {
+                    let gridApi = e.api;
+                    gridApi.sizeColumnsToFit();
+                }
+                """)
+
+
+
+                # Render AgGrid with export button and fixed column widths
+                # Set column widths for key columns
+                col_widths = {
+                    "TEST_NUMBER": 100,
+                    "PARAMETER_NAME": 180,
+                    "STATE_NAME": 120,
+                    "OPERATION": 110,
+                }
+                # Add widths for TT_ and N_ columns
+                for col in tt_summary.columns:
+                    if col.startswith("TT_") or col.startswith("N_") or col == "TT_Diff":
+                        col_widths[col] = 110
+
+                # Extract the list of column fields from columnDefs
+                for col, width in col_widths.items():
+                    if col in tt_summary.columns:
+                        gb.configure_column(col, width=width,autoHeaderHeight=True,headerTooltip = col  )
+
+                grid_options = gb.build()
+
+                grid_response = AgGrid(
+                    tt_summary,
+                    gridOptions=grid_options,
+                    enable_enterprise_modules=True,
+                    update_mode=GridUpdateMode.NO_UPDATE,
+                    fit_columns_on_grid_load=False,  # Don't auto-fit, use our widths
+                    height=19*32,
+                    onGridReady=auto_size_js,
+                    allow_unsafe_jscode=True,
+                    custom_js=[
+                        JsCode("""
+                        function(e) {
+                            e.api.sizeColumnsToFit();
+                            e.api.gridOptions.api.gridOptionsWrapper.gridOptions.enableRangeSelection = true;
+                            e.api.gridOptions.api.gridOptionsWrapper.gridOptions.enableClipboard = true;
+                        }
+                        """)
+                    ],
+                    enableRangeSelection=True,
+                    enableRowSelection=True,
+                    rowSelection='multiple',
+                    suppressRowClickSelection=False,
+                )
+
+                # csv = df_test.to_csv(index=False).encode('utf-8')
+                # st.download_button(
+                # label="Download Data as CSV",
+                # data=csv,
+                # file_name="test_time_by_test.csv",
+                # mime="text/csv",
+                # key="test_time_by_test_download_btn"
+                # )
+
+                with st.expander("Test Time By Test Graph", expanded=False):
+                    plot_graph_tt_by_test = st.checkbox("Plot Graph", value=False, key="plot_graph_tt_by_test")
+                    if plot_graph_tt_by_test:
+                        
+                        df_ttt_raw = load_merged_data('TEST_TIME_BY_TEST_ALL.csv')
+                        st.write(f"df_ttt_raw org: {len(df_ttt_raw)}")
+
+                        if len(df_ttt_raw) > 0:
+                            df_ttt_raw = apply_filter_flex(df_ttt_raw,
+                                        filter_text_tt_op_tt,
+                                        logic_tt_op_tt,
+                                        [ "OPERATION", "STATE_NAME", 'TEST_NUMBER', 'PARAMETER_NAME', 'SPC_ID'],
+                                        col_alias=col_alias)
+                        
+                        test_list = df_ttt_raw["TEST_NUMBER"].dropna().unique().tolist()
+                        st.write(f"Filtered rows for graph: {len(df_ttt_raw)}, tests in parameter list: {test_list}")
+
+                        if len(df_ttt_raw) < 10000:
+                            max_test_time = df_ttt_raw['ELAPSED_TIME'].max()
+                            TestTimeCalText = 'TestTime(Sec.)'
+                            df_ttt_raw[TestTimeCalText] = df_ttt_raw['ELAPSED_TIME']
+
+                            hover_cols = [c for c in ["SERIAL_NUM", "TRANS_SEQ"] if c in df_ttt_raw.columns]
+                            
+                            if max_test_time > 10000:
+                                TestTimeCalText = 'TestTime(hrs.)'
+                                df_ttt_raw[TestTimeCalText] = df_ttt_raw['ELAPSED_TIME'] / 3600
+
+                            df_ttt_raw['plot_column'] = df_ttt_raw['OPERATION'].astype(str) \
+                                                        + " - " + df_ttt_raw['STATE_NAME'].astype(str)  \
+                                                        + " - " + df_ttt_raw['TEST_NUMBER'].astype(str) \
+                                                        + " - " + df_ttt_raw['PARAMETER_NAME'].astype(str) \
+                                                        + " - " + df_ttt_raw['SPC_ID'].astype(str)  \
+    
+                            fig = px.violin(
+                                df_ttt_raw,
+                                x="plot_column",
+                                y=TestTimeCalText,
+                                color=color_arg,
+                                hover_data=hover_cols,
+                                box=True,
+                                points="all"
+                            )
+
+                            fig = add_violin_labels(
+                                fig,
+                                df=df_ttt_raw,
+                                x_col="plot_column",
+                                y_col=TestTimeCalText,
+                                color_col=color_arg,
+                                label_metric="mean",  # or "mean"
+                            )
+                            if "plot_column" in df_ttt_raw.columns and isinstance(df_ttt_raw['plot_column'], pd.Categorical):
+                                fig.update_xaxes(categoryorder='array', categoryarray=list(df_ttt_raw['plot_column'].cat.categories))
+
+                            fig.update_layout(
+                                            dragmode="select",  # Default to user selection mode
+                                            yaxis_title="Test Time (hours)",
+                                            xaxis_title=color_arg,
+                                            yaxis_type=y_scale,
+                                            legend_title=(color_arg),
+                                            margin=dict(l=10, r=10, t=40, b=10)
+                                        )
+                            event_state_ttt = st.plotly_chart(fig, use_container_width=True,key="violin_ttt",on_select="rerun")                            
+                            pts_ttt = event_state_ttt.selection.points  # Streamlit PlotlySelectionState.points :contentReference[oaicite:2]{index=2}
+
+                            # Extract SN, TS, OPER, Test Time, Group_Name from pts
+                            if pts_ttt:
+                                st.write("Total selected points:", len(pts_ttt))
+                                violin_points_data = []
+                                for pt in pts_ttt:
+                                    SN = pt.get("customdata", [None, None])[0]
+                                    TS = pt.get("customdata", [None, None])[1]
+                                    OPER = pt.get("x")
+                                    OPER2 = pt.get("x")
+                                    OPER3 = pt.get("x")
+                                    OPER4 = pt.get("x")
+                                    OPER5 = pt.get("x")
+                                    Test_Time = pt.get("y")
+                                    Group_Name = pt.get("legendgroup")
+                                    violin_points_data.append({
+                                    "SN": SN,
+                                    "TS": TS,
+                                    f"{color_arg}_1": OPER.split(" - ")[0] if " - " in OPER else OPER,  # extract state name if OP_STATE format
+                                    "Group_Name": Group_Name,                    
+                                    f"{color_arg}_2": OPER.split(" - ")[1] if " - " in OPER else OPER,  # extract state name if OP_STATE format                    
+                                    f"{color_arg}_3": OPER.split(" - ")[2] if " - " in OPER else OPER,  # extract state name if OP_STATE format                    
+                                    f"{color_arg}_4": OPER.split(" - ")[3] if " - " in OPER else OPER,  # extract state name if OP_STATE format                    
+                                    f"{color_arg}_5": OPER.split(" - ")[4] if " - " in OPER else OPER,  # extract state name if OP_STATE format                    
+                                    "Test Time": Test_Time
+
+                                    })
+                                violin_points_df = pd.DataFrame(violin_points_data)
+                                # Set fixed width for columns in violin_points_df display
+                                col_widths = {col: {"width": 120} for col in violin_points_df.columns}
+                                if len(violin_points_df.columns) > 0:
+                                    last_col = violin_points_df.columns[-1]
+                                    col_widths[last_col] = {"width": 240}
+                                # Add index column starting from 1
+                                violin_points_df.index = violin_points_df.index + 1
+                                violin_points_df.reset_index(inplace=True)
+                                violin_points_df.rename(columns={"index": "No."}, inplace=True)
+                                st.dataframe(violin_points_df, use_container_width=False, column_config=col_widths, height=8*32, hide_index=True)
+            else:
+                st.info("No filtered data available. Query data above to view state-wise test time.")
+
+
+        with st.expander("Test Time By Test Parameter", expanded=False):
+            st.markdown('<div class="section-title">Test Time By Test Parameter</div>', unsafe_allow_html=True)
+
+            # if not has_query_params:
+            # force condition
+            df_test_parameter = load_merged_test_time_by_test_parm().copy()
+            group_name_list = df_test_parameter["GROUP_NAME"].dropna().unique().tolist()
+            st.write(f"Total rows before filter: {len(df_test_parameter)}")
+            if df_test_parameter.empty:
+                st.info("No data available. Please run query to load data.")
+            else:
+
+                c1_tt, c2_tt, c3_tt = st.columns(3)
+                col_alias = {
+                    "STATE": "STATE_NAME",
+                    "OP": "OPERATION",
+                    "PARM": "PARAMETER_NAME",
+                    "TEST": "TEST_NUMBER",
+                }
+                with c1_tt:
+                    filter_text_tt_op_tt_detail = st.text_input(
+                    "Filter Text Box",
+                    "",
+                    placeholder="Search in all columns...",
+                    help=f"- Free terms (no \":\") search across search_cols (or all columns if None).\n- Column-specific terms use the syntax COL:VALUE, e.g. STATE:ZAP TEST:275\n- [STATE:STATE_NAME, OP:OPERATION, PARM:PARAMETER_NAME, TEST:TEST_NUMBER]",
+                    key="filter_text_tt_op_tt_detail"
+                    )
+
+                    
+                with c2_tt:
+                    logic_tt_op_tt_detail = st.radio(
+                    "Search Mode",
+                    ["AND","OR"],
+                    horizontal=True,
+                    help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
+                    key="logic_tt_op_tt_detail"
+                    )
+
+                df_test = apply_filter_flex(
+                    df_test_parameter,
+                    filter_text_tt_op_tt_detail,
+                    logic_tt_op_tt_detail,
+                    [ "OPERATION", "STATE_NAME", 'TEST_NUMBER', 'PARAMETER_NAME', 'SPC_ID'],
+                    col_alias=col_alias
+                )
+
+                with c3_tt:
+                    st.success(f"Filtered rows: {len(df_test)}")
+
+                if len(df_test) > 3000:
+                    st.warning("Too many rows after filtering. Please refine your filter to less than 3000 rows for better performance.")
+                    st.stop()
+                
+                column_order = getPCOColumnOrder()
+                KEY_COLS = ["OPERATION", "STATE_NAME", "PARAMETER_NAME", "TEST_NUMBER", "SPC_ID"]
+                SHOW_COLS = ["check","STATE_NAME", "PARAMETER_NAME", "SPC_ID" ,"TEST_TIME_HR" ,"TEST_PARAMETERS"]
+
+                def flatten_columns(df: pd.DataFrame) -> pd.DataFrame:
+                    if isinstance(df.columns, pd.MultiIndex):
+                        df = df.copy()
+                        df.columns = [
+                            "_".join([str(x) for x in col if x not in (None, "", "nan")]).strip("_")
+                            for col in df.columns
+                        ]
+                    return df
+
+                if not df_test.empty:
+                    
+
+                    df_test_parameter_full_data = df_test.copy()
+
+                    df_test_parameter_pivot = df_test.pivot_table(
+                        index=KEY_COLS,
+                        columns=["GROUP_NAME"],
+                        values=[ "TEST_TIME_HR","TEST_PARAMETERS"],
+                        aggfunc={"TEST_TIME_HR": "sum", "TEST_PARAMETERS": "size"},
+                        fill_value=0
+                    )
+                
+                    # Order Col
+                    metric_order = ["TEST_TIME_HR", "TEST_PARAMETERS"]
+                    group_order = getPCOColumnOrder()
+
+                    new_cols = [
+                        (metric, grp)
+                        for metric in metric_order
+                        for grp in group_order
+                        if (metric, grp) in df_test_parameter_pivot.columns
+                    ]
+
+                    df_test_parameter_pivot = df_test_parameter_pivot.loc[:, new_cols]
+
+                    df_test_parameter_pivot = df_test_parameter_pivot.rename(
+                        columns={
+                            "TEST_TIME_HR": "TestTime(Hrs.)",
+                            "TEST_PARAMETERS": "Count"
+                        },
+                        level=0
+                    )
+
+
+                    # Display Main Table
+                    selection = st.dataframe(
+                        df_test_parameter_pivot, 
+                        on_select="rerun",  # Triggers app rerun on selection
+                        selection_mode="multi-row"  # Can also be "single-row"
+                    )
+
+                    selected_rows = df_test_parameter_pivot.copy().reset_index().iloc[selection.selection.rows]
+                    st.write(f"Selected {len(selected_rows)} rows.")
+
+
+                    if len(selected_rows) == 0:
+                        st.info("Please select row.")
+                    else:
+                        # remove duplicates rows
+                        # st.write(f"Selected rows before removing duplicates: {(selection)}")
+                        # st.write(selected_rows)
+
+                        df_selected = flatten_columns(selected_rows)
+                        selected_keys = df_selected[KEY_COLS].drop_duplicates()
+
+                        filtered_full = df_test_parameter_full_data.merge(
+                            selected_keys,
+                            on=KEY_COLS,
+                            how="inner"
                         )
 
-                        sel1 = edited_parameter1[edited_parameter1["check"] == True]
+                        # debug
+                        # st.write(selected_keys)
+                        # st.write(filtered_full)
 
-                        if sel1.empty:
-                            st.info("Please select at least one row.")
+                        if "check" not in filtered_full.columns:
+                            filtered_full.insert(0, "check", False)
+
+
+                        # GROUP_NAME
+                        if "GROUP_NAME" not in filtered_full.columns:
+                            st.warning("Can not find columns GROUP_NAME in dataframe.")
+                            st.dataframe(filtered_full, width="stretch")
                         else:
-                            tp1 = sel1.iloc[0]["TEST_PARAMETERS"]
-                            tt1 = sel1.iloc[0]["TEST_TIME_HR"]
-                            d1 = extract_dict_from_test_parameters(tp1)
-                            df_parameter_table = build_ttp_table(d1, groups[0], tt1)
-                            st.markdown("## Parameter Compare Table")
-                            st.dataframe(df_parameter_table, width="stretch")
+                            groups = list(filtered_full["GROUP_NAME"].dropna().unique())
 
-                    else:
-                        if len(groups) == 2:
-                            g1, g2 = column_order[0], column_order[1]
-                            col1, col2 = st.columns(2)
+                            if len(groups) == 0:
+                                st.warning("No GROUP_NAME")
+                                st.dataframe(filtered_full, width="stretch")
 
-                            df_g1 = filtered_full[filtered_full["GROUP_NAME"] == g1][SHOW_COLS].copy()
-                            df_g2 = filtered_full[filtered_full["GROUP_NAME"] == g2][SHOW_COLS].copy()
-
-                            
-                            # if "check" not in df_g1.columns:
-                            #     df_g1.insert(0, "check", False)
-                            # if "check" not in df_g2.columns:
-                            #     df_g2.insert(0, "check", False)
-
-                            # auto select if df_g1 and df_g2 have a row.
-                            default_value = len(df_g1) == 1 and len(df_g2) == 1
-
-                            df_g1 = df_g1.assign(check=default_value)
-                            df_g2 = df_g2.assign(check=default_value)
-
-                            with col1:
-                                st.markdown(f"### {g1}")
+                            elif len(groups) == 1:
+                                st.subheader(f"Group: {groups[0]}")
+                                # st.dataframe(
+                                #     filtered_full[filtered_full["GROUP_NAME"] == groups[0]],
+                                #     width="stretch"
+                                # )
+                                df_g1 = filtered_full[filtered_full["GROUP_NAME"] == groups[0]][SHOW_COLS].copy()
+                                default_value = len(df_g1) == 1
+                                df_g1 = df_g1.assign(check=default_value)
                                 edited_parameter1 = st.data_editor(
                                     df_g1,
                                     width="stretch",
@@ -2726,101 +2869,147 @@ with st.expander("Test Time By Test Parameter", expanded=False):
                                         "check": st.column_config.CheckboxColumn(
                                             "check",
                                             help="select row for compare parameter.",
+                                            default=False,
                                         )
                                     },
-                                    disabled=[c for c in df_g1.columns if c != "check"],
                                     key="parameter1_selector",
                                 )
 
-                            with col2:
-                                st.markdown(f"### {g2}")
-                                edited_parameter2 = st.data_editor(
-                                    df_g2,
-                                    width="stretch",
-                                    hide_index=True,
-                                    column_config={
-                                        "check": st.column_config.CheckboxColumn(
-                                            "check",
-                                            help="select row for compare parameter.",
-                                        )
-                                    },
-                                    disabled=[c for c in df_g2.columns if c != "check"],
-                                    key="parameter2_selector",
-                                )
+                                sel1 = edited_parameter1[edited_parameter1["check"] == True]
 
-                            # --- select rows ---
-                            sel1 = edited_parameter1[edited_parameter1["check"] == True]
-                            sel2 = edited_parameter2[edited_parameter2["check"] == True]
+                                if sel1.empty:
+                                    st.info("Please select at least one row.")
+                                else:
+                                    tp1 = sel1.iloc[0]["TEST_PARAMETERS"]
+                                    tt1 = sel1.iloc[0]["TEST_TIME_HR"]
+                                    d1 = extract_dict_from_test_parameters(tp1)
+                                    df_parameter_table = build_ttp_table(d1, groups[0], tt1)
+                                    st.markdown("## Parameter Compare Table")
+                                    st.dataframe(df_parameter_table, width="stretch")
 
-                            st.write(f"Selected: {g1} = {len(sel1)} | {g2} = {len(sel2)}")
-
-                            if sel1.empty and sel2.empty:
-                                st.info("Please select at least one row.")
-                            elif (not sel1.empty) and sel2.empty:
-                                tp1 = sel1.iloc[0]["TEST_PARAMETERS"]
-                                tt1 = sel1.iloc[0]["TEST_TIME_HR"]
-                                d1 = extract_dict_from_test_parameters(tp1)
-                                df_parameter_table = build_ttp_table(d1, g1, tt1)
-                                st.markdown("## Parameter Compare Table1")
-                                st.dataframe(df_parameter_table, width="stretch")
-                            elif sel1.empty and (not sel2.empty):
-                                tp2 = sel2.iloc[0]["TEST_PARAMETERS"]
-                                tt2 = sel2.iloc[0]["TEST_TIME_HR"]
-                                d2 = extract_dict_from_test_parameters(tp2)
-                                df_parameter_table = build_ttp_table(d2, g2, tt2)
-                                st.markdown("## Parameter Compare Table2")
-                                st.dataframe(df_parameter_table, width="stretch")
                             else:
-                                # compare only first row.
-                                tp1 = sel1.iloc[0]["TEST_PARAMETERS"]
-                                tp2 = sel2.iloc[0]["TEST_PARAMETERS"]
+                                if len(groups) == 2:
+                                    g1, g2 = column_order[0], column_order[1]
+                                    col1, col2 = st.columns(2)
 
-                                tt1 = sel1.iloc[0]["TEST_TIME_HR"]
-                                tt2 = sel2.iloc[0]["TEST_TIME_HR"]
+                                    df_g1 = filtered_full[filtered_full["GROUP_NAME"] == g1][SHOW_COLS].copy()
+                                    df_g2 = filtered_full[filtered_full["GROUP_NAME"] == g2][SHOW_COLS].copy()
 
-                                d1 = extract_dict_from_test_parameters(tp1)
-                                d2 = extract_dict_from_test_parameters(tp2)
+                                    
+                                    # if "check" not in df_g1.columns:
+                                    #     df_g1.insert(0, "check", False)
+                                    # if "check" not in df_g2.columns:
+                                    #     df_g2.insert(0, "check", False)
 
-                                df_compare = build_compare_table(d1, d2, g1, g2, tt1, tt2)
+                                    # auto select if df_g1 and df_g2 have a row.
+                                    default_value = len(df_g1) == 1 and len(df_g2) == 1
 
-                                st.markdown("## Parameter Compare Table")
-                                # st.dataframe(df_compare, width="stretch")
-                                # hightligh different data
-                                mask = df_compare[g1] != df_compare[g2]
-                                st.dataframe(
-                                    df_compare.style.apply(
-                                        lambda x: ['background-color: #ad9709' if mask[i] else '' for i in range(len(df_compare))],
-                                        axis=0
-                                    ),
-                                    width="stretch"
-                                )
+                                    df_g1 = df_g1.assign(check=default_value)
+                                    df_g2 = df_g2.assign(check=default_value)
 
-                                st.write(f"Test time: {g1} = {tt1} hours | {g2} = {tt2} hours")
-        else:
-            st.info("No filtered data available. Query data above to view state-wise test time.")
+                                    with col1:
+                                        st.markdown(f"### {g1}")
+                                        edited_parameter1 = st.data_editor(
+                                            df_g1,
+                                            width="stretch",
+                                            hide_index=True,
+                                            column_config={
+                                                "check": st.column_config.CheckboxColumn(
+                                                    "check",
+                                                    help="select row for compare parameter.",
+                                                )
+                                            },
+                                            disabled=[c for c in df_g1.columns if c != "check"],
+                                            key="parameter1_selector",
+                                        )
+
+                                    with col2:
+                                        st.markdown(f"### {g2}")
+                                        edited_parameter2 = st.data_editor(
+                                            df_g2,
+                                            width="stretch",
+                                            hide_index=True,
+                                            column_config={
+                                                "check": st.column_config.CheckboxColumn(
+                                                    "check",
+                                                    help="select row for compare parameter.",
+                                                )
+                                            },
+                                            disabled=[c for c in df_g2.columns if c != "check"],
+                                            key="parameter2_selector",
+                                        )
+
+                                    # --- select rows ---
+                                    sel1 = edited_parameter1[edited_parameter1["check"] == True]
+                                    sel2 = edited_parameter2[edited_parameter2["check"] == True]
+
+                                    st.write(f"Selected: {g1} = {len(sel1)} | {g2} = {len(sel2)}")
+
+                                    if sel1.empty and sel2.empty:
+                                        st.info("Please select at least one row.")
+                                    elif (not sel1.empty) and sel2.empty:
+                                        tp1 = sel1.iloc[0]["TEST_PARAMETERS"]
+                                        tt1 = sel1.iloc[0]["TEST_TIME_HR"]
+                                        d1 = extract_dict_from_test_parameters(tp1)
+                                        df_parameter_table = build_ttp_table(d1, g1, tt1)
+                                        st.markdown("## Parameter Compare Table1")
+                                        st.dataframe(df_parameter_table, width="stretch")
+                                    elif sel1.empty and (not sel2.empty):
+                                        tp2 = sel2.iloc[0]["TEST_PARAMETERS"]
+                                        tt2 = sel2.iloc[0]["TEST_TIME_HR"]
+                                        d2 = extract_dict_from_test_parameters(tp2)
+                                        df_parameter_table = build_ttp_table(d2, g2, tt2)
+                                        st.markdown("## Parameter Compare Table2")
+                                        st.dataframe(df_parameter_table, width="stretch")
+                                    else:
+                                        # compare only first row.
+                                        tp1 = sel1.iloc[0]["TEST_PARAMETERS"]
+                                        tp2 = sel2.iloc[0]["TEST_PARAMETERS"]
+
+                                        tt1 = sel1.iloc[0]["TEST_TIME_HR"]
+                                        tt2 = sel2.iloc[0]["TEST_TIME_HR"]
+
+                                        d1 = extract_dict_from_test_parameters(tp1)
+                                        d2 = extract_dict_from_test_parameters(tp2)
+
+                                        df_compare = build_compare_table(d1, d2, g1, g2, tt1, tt2)
+
+                                        st.markdown("## Parameter Compare Table")
+                                        # st.dataframe(df_compare, width="stretch")
+                                        # hightligh different data
+                                        mask = df_compare[g1] != df_compare[g2]
+                                        st.dataframe(
+                                            df_compare.style.apply(
+                                                lambda x: ['background-color: #ad9709' if mask[i] else '' for i in range(len(df_compare))],
+                                                axis=0
+                                            ),
+                                            width="stretch"
+                                        )
+
+                                        st.write(f"Test time: {g1} = {tt1} hours | {g2} = {tt2} hours")
+                else:
+                    st.info("No filtered data available. Query data above to view state-wise test time.")
 
 
-        # if not df_test.empty:
-        #     st.write(f"Filtered rows: {len(df_test)}")
-            
-        #     # Show ALL Data frame after fillter
-        #     # st.write(df_test)
+                # if not df_test.empty:
+                #     st.write(f"Filtered rows: {len(df_test)}")
+                    
+                #     # Show ALL Data frame after fillter
+                #     # st.write(df_test)
 
-        #     df_test_parameter_full_data = df_test.copy()
+                #     df_test_parameter_full_data = df_test.copy()
 
-        #     df_test_parameter_pivot = df_test.pivot_table(
-        #         index=[ "OPERATION", "STATE_NAME", "PARAMETER_NAME", "TEST_NUMBER", "SPC_ID" ],
-        #         columns=["GROUP_NAME",],
-        #         values=["TEST_PARAMETERS"],
-        #         aggfunc={"TEST_PARAMETERS": "size"},
-        #         fill_value=0
-        #     ).reset_index()
+                #     df_test_parameter_pivot = df_test.pivot_table(
+                #         index=[ "OPERATION", "STATE_NAME", "PARAMETER_NAME", "TEST_NUMBER", "SPC_ID" ],
+                #         columns=["GROUP_NAME",],
+                #         values=["TEST_PARAMETERS"],
+                #         aggfunc={"TEST_PARAMETERS": "size"},
+                #         fill_value=0
+                #     ).reset_index()
 
-        #     st.write(df_test_parameter_pivot)
-        # else:
-        #     st.info("No filtered data available. Query data above to view state-wise test time.")
+                #     st.write(df_test_parameter_pivot)
+                # else:
+                #     st.info("No filtered data available. Query data above to view state-wise test time.")
 
-
-
-source_df = load_test_time_hist_info()
-TestTime_Hist_block("Test Time Hist", source_df)
+# source_df = load_test_time_hist_info()
+# TestTime_Hist_block("Test Time Hist", source_df)
