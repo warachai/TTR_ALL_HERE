@@ -1772,6 +1772,7 @@ with st.expander("Test Time By State", expanded=False):
                 logic_tt = st.radio(
                 "Search Mode",
                 ["OR", "AND"],
+                index=1,
                 horizontal=True,
                 help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
                 key="logic_tt_test"
@@ -2395,6 +2396,7 @@ with st.expander("Test Time By Test", expanded=False):
                 logic_tt_op_tt = st.radio(
                 "Search Mode",
                 ["OR", "AND"],
+                index=1,
                 horizontal=True,
                 help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
                 key="logic_tt_op_tt"
@@ -2711,12 +2713,12 @@ with st.expander("Test Time By Test", expanded=False):
             # if not has_query_params:
             # force condition
             df_test_parameter = load_merged_test_time_by_test_parm().copy()
-            group_name_list = df_test_parameter["GROUP_NAME"].dropna().unique().tolist()
-            st.write(f"Total rows before filter: {len(df_test_parameter)}")
+
             if df_test_parameter.empty:
                 st.info("No data available. Please run query to load data.")
             else:
-
+                group_name_list = df_test_parameter["GROUP_NAME"].dropna().unique().tolist()
+                st.write(f"Total rows before filter: {len(df_test_parameter)}")
                 c1_tt, c2_tt, c3_tt = st.columns(3)
                 col_alias = {
                     "STATE": "STATE_NAME",
@@ -2737,8 +2739,8 @@ with st.expander("Test Time By Test", expanded=False):
                 with c2_tt:
                     logic_tt_op_tt_detail = st.radio(
                     "Search Mode",
-                    ["AND","OR"],
-                    horizontal=True,
+                    ["OR","AND"],
+                    index=1,                    horizontal=True,
                     help="OR: Match any word | AND: Match all words, [col]_null to search for null values",
                     key="logic_tt_op_tt_detail"
                     )
