@@ -17,6 +17,7 @@ import time
 import csv
 from ftplib import FTP
 from urllib.parse import urlencode
+import pandas as pd
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -42,7 +43,7 @@ FTP_LOCAL_DIR = r'D:\work\project\project\Github\TTR_ALL_HERE\RAW\DISC'
 JIRA_BASE_URL = 'https://jira.seagate.com'
 JIRA_API_ENDPOINT = '/jira/rest/api/2/search'
 JIRA_PROJECTS = ['SUMMIT', 'MARLINCT', 'MBP', 'DORADO', 'TSR']
-JIRA_FIELDS = 'key,summary,status,reporter,created,customfield_35600'
+JIRA_FIELDS = 'key,summary,status,reporter,created,fixVersions'
 JIRA_MAX_RESULTS = 25
 JIRA_OUTPUT_FILE = r'D:\work\project\project\Github\TTR_ALL_HERE\RAW\JIRA\jira_issues.csv'
 
@@ -64,7 +65,8 @@ CSV_HEADERS = [
     'Reporter',
     'Created',
     'Summary',
-    'Improvement Type'
+    'Improvement Type',
+    'Fix Version'
 ]
 
 
@@ -107,7 +109,7 @@ def download_ftp_files(ftp_host=FTP_HOST, ftp_path=FTP_PATH,
 # ==============================================================================
 # JIRA FUNCTIONS
 # ==============================================================================
-def construct_jira_url(base_url, endpoint, project):
+def construct_jira_url(base_url, endpoint, project, start_at=0):
     """
     Constructs a Jira REST API URL with the given base URL, endpoint, and project.
 
@@ -124,7 +126,8 @@ def construct_jira_url(base_url, endpoint, project):
     query_params = {
         "jql": jql_query,
         "fields": JIRA_FIELDS,
-        "maxResults": JIRA_MAX_RESULTS
+        "maxResults": JIRA_MAX_RESULTS,
+        "startAt": start_at
     }
     return f"{base_url}{endpoint}?{urlencode(query_params)}"
 
@@ -148,6 +151,26 @@ def find_keys(d, target):
             keys.append(k)
     return keys
 
+def extract_text(data, prefix=""):
+    rows = []
+
+    if isinstance(data, dict):
+        for k, v in data.items():
+            new_prefix = f"{prefix}.{k}" if prefix else str(k)
+            rows.extend(extract_text(v, new_prefix))
+
+    elif isinstance(data, list):
+        for i, item in enumerate(data):
+            new_prefix = f"{prefix}[{i}]"
+            rows.extend(extract_text(item, new_prefix))
+
+    else:
+        rows.append({
+            "KEY": prefix,
+            "VALUE": data
+        })
+
+    return rows
 
 def handle_rest_api_result(project, driver):
     """
@@ -169,6 +192,7 @@ def handle_rest_api_result(project, driver):
         # Prepare data for CSV
         csv_data = []
 
+        key_text = ""
         for issue in data.get("issues", []):
             try:
                 key = issue["key"]
@@ -178,11 +202,30 @@ def handle_rest_api_result(project, driver):
                 assignee = fields.get("assignee", {}).get("displayName", "Unassigned")
                 created = fields.get("created", "No Created Date")
                 custom_field_value = fields.get("customfield_35600", [{}])[0].get("value", "Others") if fields.get("customfield_35600") else "Others"
-
-                csv_data.append([project, key, status, assignee, created, summary, custom_field_value])
+                key_text = key
+                fixVersion= "NA"
+                if 'fixVersions' in fields and len(fields['fixVersions']) > 0:
+                    for version in fields['fixVersions']:
+                        if 'name' in version:
+                            if fixVersion == "NA":
+                                fixVersion = version['name']
+                            else:
+                                fixVersion = fixVersion + "," + version.get('name', 'NA')  # Use fixVersion name if available
+                
+                csv_data.append([project, key, status, assignee, created, summary, custom_field_value,fixVersion])
             except Exception as e:
                 print(f"Error processing issue: {e}")
 
+        debug_mode = 0
+        if debug_mode:
+            rows = extract_text(data.get("issues", []))
+
+            # dataframe
+            df = pd.DataFrame(rows)
+
+            # save csv
+            #df.to_csv(f"r:/output_{key_text}.csv", index=False)
+            debug_mode = 0;
         # Determine write mode (create or append)
         write_headers = not os.path.exists(JIRA_OUTPUT_FILE)
 
@@ -227,7 +270,7 @@ def scrape_jira_issues():
         # First, load the base domain to set cookies
         print(f"Accessing base domain: {JIRA_BASE_URL}")
         driver.get(JIRA_BASE_URL + '/jira/browse/MARLINCT-2193')
-        time.sleep(10)
+        time.sleep(20)  # Wait for manual login if needed, require Authenticator app for 2FA
         
         # Process each project
         for project in JIRA_PROJECTS:
@@ -243,6 +286,32 @@ def scrape_jira_issues():
         print("Jira scraping completed.")
 
 
+def scrape_jira_issues_last500():
+    """
+    Scrape Jira issues for all configured projects and save to CSV.
+    """
+    driver = setup_chrome_driver()
+    
+    try:
+        # First, load the base domain to set cookies
+        print(f"Accessing base domain: {JIRA_BASE_URL}")
+        driver.get(JIRA_BASE_URL + '/jira/browse/MARLINCT-2193')
+        time.sleep(20)  # Wait for manual login if needed, require Authenticator app for 2FA
+        
+        # Process each project
+        for project in JIRA_PROJECTS:
+            for start_at in range(0, 500, JIRA_MAX_RESULTS):
+                print(f"Processing project: {project}")
+                query_url = construct_jira_url(JIRA_BASE_URL, JIRA_API_ENDPOINT, project, start_at=start_at)
+                driver.get(query_url)
+                time.sleep(10)
+                handle_rest_api_result(project, driver)
+                time.sleep(5)
+    
+    finally:
+        driver.quit()
+        print("Jira scraping completed.")
+
 # ==============================================================================
 # MAIN EXECUTION
 # ==============================================================================
@@ -255,17 +324,18 @@ def main():
     print("=" * 80)
     
     # Step 1: Download FTP files
-    print("\n[1/2] Downloading DISC files from FTP...")
-    try:
-        download_ftp_files()
-        print("FTP download completed successfully.")
-    except Exception as e:
-        print(f"Error during FTP download: {e}")
+    # print("\n[1/2] Downloading DISC files from FTP...")
+    # try:
+    #     download_ftp_files()
+    #     print("FTP download completed successfully.")
+    # except Exception as e:
+    #     print(f"Error during FTP download: {e}")
     
     # Step 2: Scrape Jira issues
     print("\n[2/2] Scraping Jira issues...")
     try:
         scrape_jira_issues()
+        #scrape_jira_issues_last500()
         print("Jira scraping completed successfully.")
     except Exception as e:
         print(f"Error during Jira scraping: {e}")
