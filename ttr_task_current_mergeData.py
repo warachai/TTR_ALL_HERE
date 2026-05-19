@@ -323,12 +323,12 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
     if excel_files:
         for excel_config in excel_files:
             excel_data = read_excel_file(
-                excel_file=excel_config.get('file'),
-                sheet_name=excel_config.get('sheet'),
-                column_map=excel_config.get('column_map', {}),
-                source_name=excel_config.get('source_name', 'excel'),
-                start_row=excel_config.get('start_row', 1),
-                program_name=excel_config.get('program_name', '')
+                excel_file=excel_files[excel_config][0].get('file'),
+                sheet_name=excel_files[excel_config][0].get('sheet'),
+                column_map=excel_files[excel_config][0].get('column_map', {}),
+                source_name=excel_files[excel_config][0].get('source_name', 'excel'),
+                start_row=excel_files[excel_config][0].get('start_row', 1),
+                program_name=excel_files[excel_config][0].get('program_name', '')
             )
             
             # Apply program name mapping to Excel data
