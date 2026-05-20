@@ -324,12 +324,12 @@ def main():
     print("=" * 80)
     
     # Step 1: Download FTP files
-    # print("\n[1/2] Downloading DISC files from FTP...")
-    # try:
-    #     download_ftp_files()
-    #     print("FTP download completed successfully.")
-    # except Exception as e:
-    #     print(f"Error during FTP download: {e}")
+    print("\n[1/2] Downloading DISC files from FTP...")
+    try:
+        download_ftp_files()
+        print("FTP download completed successfully.")
+    except Exception as e:
+        print(f"Error during FTP download: {e}")
     
     # Step 2: Scrape Jira issues
     print("\n[2/2] Scraping Jira issues...")
