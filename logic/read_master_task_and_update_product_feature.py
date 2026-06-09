@@ -82,7 +82,7 @@ def main():
 
         # Filter out empty strings
         task_ids = [tid for tid in raw_ids if tid]
-
+  
         for task_id in task_ids:
             updated_row = {
                 'Program': row['Program'],

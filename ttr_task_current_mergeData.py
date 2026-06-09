@@ -71,7 +71,7 @@ def read_excel_file(excel_file, sheet_name, column_map, source_name, start_row=1
         
         # Define output fieldnames
         output_fieldnames = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 
-                           'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN']
+                           'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN', 'FixVersions']
         
         merged_data = []
         
@@ -158,7 +158,7 @@ def merge_csv_files(jira_file, ww_file, output_file):
     
     # Define output columns (unified schema)
     # Source, Program, Task_ID, Status, User_Name, Date_Time, Task_Name, Improvement_Type, GAIN
-    fieldnames = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN']
+    fieldnames = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN', 'FixVersions']
     
     # Read from jira_issues.csv
     # Columns: Project, Key, Status, Assignee, Created, Summary, Improvement Type
@@ -175,7 +175,8 @@ def merge_csv_files(jira_file, ww_file, output_file):
                 'User_Name': row.get('Assignee', ''),
                 'Date_Time': row.get('Created', ''),
                 'Task_Name': row.get('Summary', ''),
-                'Improvement_Type': row.get('Improvement Type', '')
+                'Improvement_Type': row.get('Improvement Type', ''),
+                'FixVersions': row.get('FixVersions', '')
             })
             jira_count += 1
         print(f"  Found {jira_count} rows from jira_issues.csv")
@@ -195,7 +196,8 @@ def merge_csv_files(jira_file, ww_file, output_file):
                 'User_Name': row.get('user_name', ''),
                 'Date_Time': row.get('date_time_req', ''),
                 'Task_Name': row.get('task_name', ''),
-                'Improvement_Type': row.get('improvement_type', '')
+                'Improvement_Type': row.get('improvement_type', ''),
+                'FixVersions': row.get('fixversions', '')
             })
             ww_count += 1
         print(f"  Found {ww_count} rows from WW2619.csv")
@@ -262,7 +264,7 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
         program_name_map = {}
     
     # Define output columns (unified schema)
-    fieldnames = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN']
+    fieldnames = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN', 'FixVersions']
     
     # Read from jira_issues.csv
     if os.path.exists(jira_file):
@@ -274,6 +276,9 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
                 program_name = row.get('Project', '')
                 # Apply program name mapping
                 program_name = program_name_map.get(program_name, program_name)
+
+                if row.get('Key', '') == 'MARLINCT-2337':
+                    print(f"Processing JIRA row: Program='{program_name}', Key='{row.get('Key', '')}', FixVersions='{row.get('Fix Version', '')}'")
                 
                 merged_data.append({
                     'Source': 'jira_issues',
@@ -283,7 +288,8 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
                     'User_Name': row.get('Assignee', ''),
                     'Date_Time': row.get('Created', ''),
                     'Task_Name': row.get('Summary', ''),
-                    'Improvement_Type': row.get('Improvement Type', '')
+                    'Improvement_Type': row.get('Improvement Type', ''),
+                    'FixVersions': row.get('Fix Version', '')
                 })
                 jira_count += 1
             print(f"  Found {jira_count} rows from jira_issues.csv")
@@ -310,7 +316,8 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
                     'User_Name': row.get('user_name', ''),
                     'Date_Time': row.get('date_time_req', ''),
                     'Task_Name': row.get('task_name', ''),
-                    'Improvement_Type': row.get('improvement_type', '')
+                    'Improvement_Type': row.get('improvement_type', ''),
+                    'FixVersions': row.get('FixVersions', '')                    
                 })
                 ww_count += 1
             print(f"  Found {ww_count} rows from {ww_file}")

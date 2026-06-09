@@ -9,7 +9,7 @@ sys.path.append(parent_dir)
 
 import config
 import pandas as pd  # Ensure pandas is imported
-
+   
 def main():
     # Read the CSV files
     raw_ttr_item_path = config.MERGED_OUTPUT_PATH

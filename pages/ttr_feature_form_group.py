@@ -193,7 +193,8 @@ df_filtered_tasks = df_filtered_tasks[
         "User_Name",
         "Date_Time",
         "Improvement_Type",
-        "Feature_Parent"
+        "Feature_Parent",
+        "FixVersions"
     ]
 ]
 
@@ -219,7 +220,9 @@ df_filteredSubTask = None
 selected_row = None
 selected_row_index = None
 
+st.write(f"MMM Selected row indices: {rows}")  #
 if rows:
+
     selected_row_index = rows[0] # Get the first selected row index
     selected_row = df_filtered_tasks.iloc[selected_row_index]
     # st.write("Selected Row:")

@@ -33,10 +33,10 @@ def main():
     # Rename column 'Task_Name' to 'Feature_Name'
     df_raw_issue.rename(columns={'Task_Name': 'Feature_Name'}, inplace=True)
 
-    required_columns = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Feature_Name', 'Improvement_Type']
+    required_columns = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Feature_Name', 'Improvement_Type', 'FixVersions']
     df_raw_issue = df_raw_issue[required_columns]
 
-    update_cols = ['Status', 'User_Name', 'Feature_Name']
+    update_cols = ['Status', 'User_Name', 'Feature_Name', 'FixVersions']
 
     keys = ['Program', 'Task_ID']
 
