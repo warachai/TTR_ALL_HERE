@@ -17359,3 +17359,75 @@ DISC,SUMMIT,CR0015081,Awaiting Acceptation,Sompong Sukprasong,2026-06-05 12:44:2
 DISC,SUMMIT,CR0015082,Awaiting Acceptation,Rawinnipa Sutantiwanichkul,2026-06-05 12:45:50,SUMMIT LITE Cyl pad keep EC10717 original spec,,,,,,
 DISC,DORADO,CR0015083,Developing,Mongkol Bowornwiriyanat,2026-06-05 12:47:52,Dorado APS BPI back off feature for SMR,,,,,,
 DISC,DORADO,CR0015084,Developing,Suphaphit Saepu,2026-06-05 16:00:50,Dorado : SMR: Reset the DOS RAP THRESHOLD defaults in PWT,,,,,,
+jira_issues,MARLIN BP,MBP-2430,Open,,2026-06-12T08:00:38.000+0800,"FA the high SCOPY EC48503 DLC errors on the sliver SBR, TKMBDL0309B.",Others,,,,,
+jira_issues,MARLIN BP,MBP-2429,Open,,2026-06-12T06:07:00.000+0800,DISC_CLAMP_SCRN at Cold,Others,,,,,
+jira_issues,MARLIN BP,MBP-2428,In Progress,,2026-06-11T22:37:25.000+0800,Update SCOPY SFW - Ex3C,Others,,,,,"MBP_5_0_11,MBP_5_1_4"
+jira_issues,MARLIN BP,MBP-2427,Open,,2026-06-11T16:43:43.000+0800,PRE2-10267 remove ML_HAMR_JOG state,Others,,,,,MBP_5_0_11
+jira_issues,MARLIN BP,MBP-2426,Open,,2026-06-11T16:36:03.000+0800,CERT Instability with SHST (Single Head Stress Tess),Others,,,,,MBP_5_0_11
+jira_issues,MARLIN BP,MBP-2425,Open,,2026-06-11T16:28:18.000+0800,set OClim 0.2 for High SkipTrack failure,Others,,,,,MBP_5_0_11
+jira_issues,MARLIN BP,MBP-2424,Open,,2026-06-11T10:37:19.000+0800,Eval to revise the RSR for MarlinBP Lite PF3 to 10A,Others,,,,,
+jira_issues,MARLIN BP,MBP-2423,Resolved,,2026-06-11T02:50:54.000+0800,New PegBB preamp setting for preventing seek failure by cross talk in step3,Others,,,,,
+jira_issues,MARLIN BP,MBP-2421,In Progress,,2026-06-11T00:37:34.000+0800,Remove criteria from dynamic soak for 7R = 14 day,Others,,,,,"MBP_5_0_9C,MBP_5_0_9D,MBP_5_0_11,MBP_5_1_4,MBP_5_2_0"
+jira_issues,MARLIN BP,MBP-2419,Open,,2026-06-10T23:20:43.000+0800,CLONE - Remove state READER PRM OPTI in PRE2,Others,,,,,
+jira_issues,MARLIN BP,MBP-2418,In Progress,,2026-06-10T23:07:11.000+0800,"CLONE - Update Tests T191, T291, T197, T74, T238, T418 to mitigate burnish risk during 1T erase",Others,,,,,
+jira_issues,MARLIN BP,MBP-2417,Resolved,,2026-06-10T22:55:30.000+0800,"ECN2072647, MBP create 30 & 32TB CSO PNs",Others,,,,,"MBP_5_0_10,MBP_5_1_3,MBP_6_0_0"
+jira_issues,MARLIN BP,MBP-2416,Open,,2026-06-10T11:48:30.000+0800,Fix EC11044 override at the end of operation,Others,,,,,
+jira_issues,MARLIN BP,MBP-2415,Open,,2026-06-10T09:49:14.000+0800,MarlinBP add DOTF in CERT ,Others,,,,,MBP_5_0_11
+jira_issues,MARLIN BP,MBP-2414,In Progress,,2026-06-10T00:42:27.000+0800,[rDETCR excursion] Build CMS config to process AXT_Outlier drives for CERT checkout - SBR's 316B and 317B,Others,,,,,
+jira_issues,MARLIN BP,MBP-2413,Open,,2026-06-08T13:48:29.000+0800,T255 Relative SQZ Range Calibration,Others,,,,,
+jira_issues,MARLIN BP,MBP-2412,Open,,2026-06-06T20:35:09.000+0800,MBP: LFA IOP Sweep Range Reduction,Others,,,,,
+jira_issues,MARLIN BP,MBP-2411,Open,,2026-06-06T20:21:59.000+0800,MBP: LFA Data Support in FIN2 - Reason for LFA-CAL Trigger,Others,,,,,
+jira_issues,MARLIN BP,MBP-2410,In Progress,,2026-06-06T03:21:28.000+0800,[MBP rDETCR wafer excursion] Open DETCR resistance spec in CERT for AXT_Outlier wafers,Others,,,,,
+jira_issues,MARLIN BP,MBP-2409,Open,,2026-06-06T00:10:07.000+0800,"MarlinBP SMR VC ADC - Integrated features(DOCLIM, LIME)",Others,,,,,MBP_5_2_0
+jira_issues,MARLIN BP,MBP-2408,In Progress,,2026-06-05T17:57:05.000+0800,CLONE - TTR by reducing Number of writes in T299_ATI and T299_DS_ATI,Others,,,,,"MBP_5_0_11,MBP_5_1_4,MBP_5_1_3A"
+jira_issues,MARLIN BP,MBP-2407,Open,,2026-06-05T02:42:55.000+0800,[MBP AFH] Evaluate new INS1 L7 AFH coefficients,Others,,,,,
+jira_issues,DORADO,DORADO-2080,Open,,2026-06-12T11:34:01.000+0800,[DORADO LITE] PWT EC49151 Recovery,Others,,,,,
+jira_issues,DORADO,DORADO-2079,SME Verification,,2026-06-12T08:12:04.000+0800,RSEED / MSEED SCOPY updates,Others,,,,,D2 PCO 2.2.1
+jira_issues,DORADO,DORADO-2078,Resolved,,2026-06-12T04:56:26.000+0800,"Update FPC1 to AA0037 for Alibaba, Dropbox and Bytedance",Others,,,,,"PCO 4.6.1L,PCO 5.2.1J,PCO 4.6.2F"
+jira_issues,DORADO,DORADO-2077,Open,,2026-06-12T04:11:18.000+0800,LFA_BER_DROPOUT_CAL - SMR (tweak for LFA Squeeze TCC),Others,,,,,D2 PCO 2.2.2
+jira_issues,DORADO,DORADO-2076,Open,,2026-06-12T04:09:26.000+0800,LFA_BER_DROPOUT_CAL - HSMR (tweak for LFA Squeeze TCC),Others,,,,,D2 PCO 2.2.2
+jira_issues,DORADO,DORADO-2075,Open,,2026-06-12T04:08:03.000+0800,LFA_BER_DROPOUT_CAL - CMR (tweak for LFA Squeeze TCC),Others,,,,,D2 PCO 2.2.2
+jira_issues,DORADO,DORADO-2074,Open,,2026-06-12T04:02:32.000+0800,LFA triggers with LFA-Squeeze-TCC,Others,,,,,D2 PCO 3.0.1
+jira_issues,DORADO,DORADO-2073,Open,,2026-06-11T16:33:26.000+0800,[Dorado Lite] PWT EC10452 code 3140180 (RW_SEARCH_EXHAUSTED),Others,,,,,
+jira_issues,DORADO,DORADO-2072,Open,,2026-06-11T15:28:45.000+0800,Fixed EC11044 Operation FNC2 state PES_SCRN_POSTZAP and PES_SCRN_POSTSPFS,Others,,,,,
+jira_issues,DORADO,DORADO-2071,Open,,2026-06-11T14:29:25.000+0800,[DORADO LITE] PRE2 HEAD_CAL EC10666 DEPOP,Others,,,,,
+jira_issues,DORADO,DORADO-2070,Open,,2026-06-11T07:09:43.000+0800,D1 TTR ideas for PCO 5.3,Others,,,,,
+jira_issues,DORADO,DORADO-2067,Open,,2026-06-11T03:03:10.000+0800,PFR-0714700: Temperature self-controlled spiral write,Others,,,,,
+jira_issues,DORADO,DORADO-2066,Open,,2026-06-11T02:59:11.000+0800,"Fixed incorrect write frequency in RAP for step1/3; Update to use spiral freq instead of data freq; 121.965MHz (0x455: 49662, 0x454: 12041)",Others,,,,,
+jira_issues,DORADO,DORADO-2065,Open,,2026-06-11T02:56:20.000+0800,New Triplets for spiral writing for step1/3; BC8231: 120/10/10 → 100/0/10; PegBB: 100/10/6 → 83/0/6,Others,,,,,
+jira_issues,DORADO,DORADO-2064,Open,,2026-06-11T02:51:57.000+0800,New PegBB preamp setting for preventing seek failure by cross talk in step3,Others,,,,,
+jira_issues,DORADO,DORADO-2062,Open,,2026-06-10T23:16:31.000+0800,LFA-Squeeze-TCC Limits,Others,,,,,D2 PCO 2.2.2
+jira_issues,DORADO,DORADO-2061,In Progress,,2026-06-10T16:16:54.000+0800,Dynamic Soak : Soak days checks feature,Others,,,,,
+jira_issues,DORADO,DORADO-2060,Open,,2026-06-10T14:39:48.000+0800,SCOPY_DOTF_Step4_EC55772andEC55285,Others,,,,,
+jira_issues,DORADO,DORADO-2059,Open,,2026-06-10T13:58:46.000+0800,SCOPY_E-depop_Step2,Others,,,,,
+jira_issues,DORADO,DORADO-2057,Open,,2026-06-10T02:31:28.000+0800,Poseidon plus + 565.25 + OWLD2W2 AFH coefficients,Others,,,,,
+jira_issues,DORADO,DORADO-2056,In Progress,,2026-06-10T02:12:52.000+0800,Dorado - EMT/ALT - v9.1.0 Supports,Others,,,,,
+jira_issues,DORADO,DORADO-2055,In Progress,,2026-06-10T00:07:28.000+0800,LZR TAscan TTR,Others,,,,,
+jira_issues,DORADO,DORADO-2054,Open,,2026-06-09T23:39:49.000+0800,SMR: Add T299_DS_ATI state into PWT after T299_ATI,Others,,,,,
+jira_issues,DORADO,DORADO-2053,Open,,2026-06-09T22:11:44.000+0800,Enable zone pos retry for CAL2 VBAR_SME_IOP T211 EC10190,Others,,,,,PCO 5.3.2
+jira_issues,DORADO,DORADO-2052,Resolved,,2026-06-09T16:50:37.000+0800,[DORADO LITE] LZR EC10818 Spec Optimization,Others,,,,,
+jira_issues,TSR,TSR-8669,New Request,,2026-06-12T06:23:31.000+0800,Test irecovery BPI margin flow,Others,,,,,
+jira_issues,TSR,TSR-8668,New Request,,2026-06-12T06:00:42.000+0800,PI56 Merge Format/Flawscan Develop Test Process Final Flow,Others,,,,,
+jira_issues,TSR,TSR-8667,New Request,,2026-06-12T05:27:03.000+0800,Check in new Error Code for track cleanup list full.,Others,,,,,
+jira_issues,TSR,TSR-8666,New Request,,2026-06-12T05:23:02.000+0800,Create unique Error Code for track cleanup list being full.,Others,,,,,
+jira_issues,TSR,TSR-8665,New Request,,2026-06-12T05:02:57.000+0800,Spike:  Handle PLR and other failure cases,Others,,,,,
+jira_issues,TSR,TSR-8664,Development,,2026-06-12T04:08:24.000+0800,Allow waterfall in PWT - CAPACITY_REFRESH_2 state,Others,,,,,
+jira_issues,TSR,TSR-8663,Development Completed,,2026-06-12T04:00:06.000+0800,"Add a plugin to enable APS PWT BPI backoff for all config types:  CMR, SMR, HSMR",Others,,,,,
+jira_issues,TSR,TSR-8662,Development,,2026-06-12T02:15:06.000+0800,IVBAR_CONSTRAINTS: Fix issue where all heads/test zones are measured in all iterations regardless of COMPLETE condition,Others,,,,,
+jira_issues,TSR,TSR-8661,New Request,,2026-06-12T01:05:16.000+0800,Set track cleanup timeout based on number of clean up tracks,Others,,,,,
+jira_issues,TSR,TSR-8660,New Request,,2026-06-12T00:59:45.000+0800,T210 / T230 - Add ability to add entire surface to track cleanup list.,Others,,,,,
+jira_issues,TSR,TSR-8659,New Request,,2026-06-12T00:56:49.000+0800,"Modify ""append"" functions to add track ranges instead of track + guardband.",Others,,,,,
+jira_issues,TSR,TSR-8658,New Request,,2026-06-12T00:52:01.000+0800,Add bypass mechanism to track cleanup architecture.,Others,,,,,
+jira_issues,TSR,TSR-8657,New Request,,2026-06-12T00:48:08.000+0800,Create Unit Tests for Track Cleanup Functionality,Others,,,,,
+jira_issues,TSR,TSR-8656,New Request,,2026-06-12T00:42:11.000+0800,PI56 Track Cleanup for Merge Format/Flawscan,Others,,,,,
+jira_issues,TSR,TSR-8655,Development Completed,,2026-06-11T23:53:05.000+0800,Dorado2:  Enable Multi Metric Instability Screen.  Relax OCLIM around test 296 before ZAP only.  https://jira.seagate.com/jira/browse/DORADO-1877,Others,,,,,
+jira_issues,TSR,TSR-8654,New Request,,2026-06-11T23:30:29.000+0800,Update IOP max value in response to the seek protocol,Others,,,,,
+jira_issues,TSR,TSR-8653,Development,,2026-06-11T22:57:59.000+0800,Dynamic Soak : Soak days checks feature,Others,,,,,
+jira_issues,TSR,TSR-8652,New Request,,2026-06-11T22:53:42.000+0800,Recover CHAOS Mode hop debug mode,Others,,,,,
+jira_issues,TSR,TSR-8651,New Request,,2026-06-11T22:48:30.000+0800,T61 Cleanup Tracks with User Mode Writes,Others,,,,,
+jira_issues,TSR,TSR-8650,Development Completed,,2026-06-11T21:50:04.000+0800,"Dorado:  Update ContractAndSeekDelay from [1000,1000,0]  to [20,20,0] for test time reduction (TTR).  https://jira.seagate.com/jira/browse/DORADO-2049",Others,,,,,
+jira_issues,TSR,TSR-8649,Development,,2026-06-11T17:34:19.000+0800,WKU SMR 451 leverage settings from VBAR_ZN_2D,Others,,,,,
+jira_issues,TSR,TSR-8648,Development,,2026-06-11T13:44:41.000+0800,Saturn ESLIP enhancement,Others,,,,,
+jira_issues,TSR,TSR-8647,New Request,,2026-06-11T13:19:33.000+0800,HSMR ZAP Parity issue,Others,,,,,
+jira_issues,TSR,TSR-8646,New Request,,2026-06-11T09:11:27.000+0800,T2108 - Adjust track cleanup ranges to ensure they are within the user area.,Others,,,,,
+jira_issues,TSR,TSR-8645,New Request,,2026-06-11T06:57:18.000+0800,Set compressed bit on track cleanup file,Others,,,,,
