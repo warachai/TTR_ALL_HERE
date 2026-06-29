@@ -73,7 +73,7 @@ def TestTime_Hist_block(title, df, groupby_cols=None, expand=False):
         with c0:
             program_filter = st.multiselect(
                 "Select Product(s)",
-                ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT"],
+                ["DORADO", "MARLIN", "MARLINBP", "SUMMIT"],
                 default=default_programs if raw_program_params else []
             )
         with c1:
@@ -164,7 +164,17 @@ def load_test_time_hist_info():
                     .agg({"count": "sum","OP_CNT": lambda s: ", ".join(s)})
                     .rename(columns={"count": "TOTAL_COUNT","OP_CNT": "OPERATION"}))
 
-
+            oper_list = config.HAMR_OPER_LIST
+            df_hist["MISS_OPER"] = df_hist["OPERATION"].apply(lambda x: ", ".join([op for op in oper_list if op != "Total" and op not in [item.split("-")[0] for item in x.split(", ")]]))
+            
+            df_hist["MISS_OPER"] = df_hist["MISS_OPER"].apply(lambda x: f"{len(x.split(', ')) if x else 0}: {x}")
+            # Reorder: MISS_OPER before TOTAL_COUNT
+            cols = df_hist.columns.tolist()
+            cols.remove("MISS_OPER")
+            tc_idx = cols.index("TOTAL_COUNT")
+            cols.insert(tc_idx, "MISS_OPER")
+            df_hist = df_hist[cols]
+            
             return df_hist
         except Exception as e:
             st.error(f"Error loading historical data: {e}")

@@ -1200,7 +1200,7 @@ def test_time_block(title, df, key_prefix, groupby_cols=None, group_by=None):
 
     
     # Order df_view OPERATION column to match the custom order
-    custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2", "Total"]
+    custom_order = config.HAMR_OPER_LIST + ["Total"]
     if "OPERATION" in df_view.columns:
         df_view["OPERATION"] = pd.Categorical(df_view["OPERATION"], categories=custom_order, ordered=True)
         df_view = df_view.sort_values("OPERATION")
@@ -1504,7 +1504,7 @@ with st.expander("Data Filter", expanded=False):
 with st.expander("CMS Config", expanded=False):
 
     if not source_df.empty and "OPERATION" in source_df.columns and "pco" in source_df.columns and "TEST_TIME" in source_df.columns:
-        custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+        custom_order = config.HAMR_OPER_LIST
         
         pivot_df = source_df.pivot_table(
             index=["OPERATION"],
@@ -1593,7 +1593,7 @@ with st.expander("Test Time By Operation", expanded=False):
             df_dist = df_dist.dropna(subset=['TEST_TIME'])
 
             # Limit to operations of interest (optional) and remove labels with no data
-            custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+            custom_order = config.HAMR_OPER_LIST
             if "OPERATION" in df_dist.columns:
                 df_dist = df_dist[df_dist['OPERATION'].isin(custom_order)]
                 # After initial filter, keep only operations that actually have rows
@@ -1863,7 +1863,7 @@ with st.expander("Test Time By State", expanded=False):
                         st.info("More than two TestTime groups present; diff not computed.")
 
                     # Ensure custom order is applied to OPERATION column and sort by STATE_NAME
-                    custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+                    custom_order = config.HAMR_OPER_LIST
                     if "OPERATION" in state_summary.columns:
                         state_summary["OPERATION"] = pd.Categorical(
                             state_summary["OPERATION"], categories=custom_order, ordered=True
@@ -2480,7 +2480,7 @@ with st.expander("Test Time By Test", expanded=False):
                     if len(test_time_cols) == 2:
                         tt_summary["TT_Diff"] = tt_summary[test_time_cols[0]] - tt_summary[test_time_cols[1]]
 
-                custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+                custom_order = config.HAMR_OPER_LIST
 
                 # 2) Build AgGrid options
                 gb = GridOptionsBuilder.from_dataframe(tt_summary)

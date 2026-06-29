@@ -138,6 +138,13 @@ if 0:
 with st.expander("Gui Request", expanded=True):
     
     # Product input as combobox
+
+    site_filter = st.selectbox(
+        "Select Site",
+        ["Korat", "SSDC", "LCO", "WUXI"],
+        index=0
+    )
+                
     product = st.selectbox(
         "Product",
         options=["DORADO", "MARLIN", "MARLIN BP", "SUMMIT", "OSPREY", "CIMMARON_BP", "V15"],  # Add more as needed
@@ -152,14 +159,70 @@ with st.expander("Gui Request", expanded=True):
         key="gui_sbr"
     )
 
-    # HD_Count as combo box
-    hd_count = st.selectbox(
-        "HD Count",
-        options=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,11,12, 20],  # Example values
-        key="gui_hd_count",
-        help=("Select 0 for all heads on SBR#."),
-    )
+    colA, colB, colC, colD, colE = st.columns([3, 2, 2, 2, 2])
+    with colA:
+        # HD_Count as combo box
+        hd_count = st.selectbox(
+            "HD Count",
+            options=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,11,12, 20],  # Example values
+            key="gui_hd_count",
+            help=("Select 0 for all heads on SBR#."),
+        )
 
+    with colB:
+
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stCheckbox"] {
+                margin-top: 28px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        exclude_powerloss = st.checkbox(
+            "Exclude PowerLoss",
+            key="gui_exclude_powerloss",
+            value=True,
+        )
+
+    with colC:
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stCheckbox"] {
+                margin-top: 28px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        exclude_ir = st.checkbox(
+            "Exclude IR",
+            key="gui_exclude_ir",
+            value=True
+        )
+
+    with colD:
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stCheckbox"] {
+                margin-top: 28px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        validate_feature = st.checkbox(
+            "Validate PCO Feature",
+            key="gui_validate_feature",
+            help="Validate that the PCO feature is based on the most loaded PCO, and only CMR."
+        )        
     # Config as checkbox group
     configs = st.multiselect(
         "Config",
@@ -193,6 +256,8 @@ with st.expander("Gui Request", expanded=True):
             if v == product:
                 short_name = k
                 break
+
+
         # Loop through selected configs and create a request for each
         for cfg in configs:
             attr_filter_single = attr_filter.copy()
@@ -202,6 +267,14 @@ with st.expander("Gui Request", expanded=True):
             elif "NUM_HEADS" in attr_filter_single:
                 del attr_filter_single["NUM_HEADS"]
             # If SBR contains a comma, wrap it in double quotes
+
+            if exclude_powerloss:
+                attr_filter_single["POWER_LOSS_DRIVE"] = "N"
+            if exclude_ir:
+                attr_filter_single["IR_DRIVE"] = "N"    
+            if validate_feature:
+                attr_filter_single["PCO_FEATURE_CHECK"] = "Y"
+
             sbr_value = sbr.strip().upper()
 
             sbr_req = {
@@ -221,6 +294,7 @@ with st.expander("Gui Request", expanded=True):
                 "SAVE_NAME": f"{short_name}_{hd_count:02d}H_{cfg[0]}_{sbr_save_name}",
                 "MAX_QTY": config.MAX_QUERY_QTY,
                 "DESCRIPTION": sbr_info.strip(),
+                "SITE": site_filter
             }
             request_str = f"plt={request_dict}"
             # Save to log file
@@ -445,10 +519,13 @@ def TestTime_Hist_block(title, df, groupby_cols=None):
 
         c0, c1, c2 = st.columns(3)
         default_programs = ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT", "TSR"]
+        default_sites = ["Korat", "SSDC", "LCO", "WUXI"]
         params = st.query_params
 
         raw_program_params = params.get("program", params.get("product", []))
         with c0:
+
+
             program_filter = st.multiselect(
                 "Select Product(s)",
                 ["DORADO", "MARLIN", "MARLIN BP", "SUMMIT"],

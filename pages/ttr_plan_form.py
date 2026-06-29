@@ -29,6 +29,7 @@ st.set_page_config(page_title="Test Time View", layout="wide")
 
 
 test_time_folder = config.TT_HISTORY_PATH
+test_group_folder = config.TT_SUMMARY_CSV
 def getPCOColumnOrder():
     selected = {}
     #pco_selected = {}
@@ -247,7 +248,94 @@ def load_merged_test_time_by_test():
             "TEST_TIME": [10, 12, 20, 16, 9, 11, 14, 13, 8, 10, 15, 18],
         }
         return pd.DataFrame(data)
-  
+
+# -------------------------------------------------------------------
+# Load and merge all DRV_INV.csv files from folder hierarchy
+# -------------------------------------------------------------------
+def load_merged_max_cyl():
+    """
+    """
+    dfs = []
+
+    source_file = "P172_MAX_CYL_VBAR@FNC2.csv"
+
+    # Print user selected config for debugging
+    # Collect selected values into a dict for easier access
+    # Build selected map from current URL/query parameter defaults instead of session state
+    # so it reflects the user's explicit selections (user settings) rather than transient session values.
+    selected = {}
+    params_local = st.query_params  # safe to call here; independent of later parsing
+    for idx in range(2):
+        prog_raw = params_local.get(f"prog_{idx}", "NONE")
+        cfg_raw = params_local.get(f"cfg_{idx}", "NONE")
+        pco_raw = params_local.get(f"pco_{idx}", "NONE")
+        # Handle list values (Streamlit may store as list) and normalize
+        def _norm(v):
+            if isinstance(v, list):
+                return v[0] if v else "NONE"
+            return v if isinstance(v, str) else "NONE"
+        selected[idx] = {
+            "program": _norm(prog_raw),
+            "config": _norm(cfg_raw),
+            "pco": _norm(pco_raw),
+        }
+
+    # Example: Check if path exists for each selected slot
+    user_selected = []
+    for idx, sel in selected.items():
+        prog, cfg, pco = sel["program"], sel["config"], sel["pco"]
+        if prog != "NONE" and cfg != "NONE" and pco != "NONE":
+            path = os.path.join(test_time_folder, prog, cfg, pco, source_file)
+            if path not in user_selected:
+                user_selected.append(path)
+            #st.write("path :",path)
+
+
+    for root, dirs, files in os.walk(test_time_folder):
+        if source_file in files:
+            filepath = os.path.join(root, source_file)
+            
+            # Extract hierarchy from path: R:\Test_Time_Hist\{program}\{config}\{pco}\DRV_INV.csv
+            rel_path = os.path.relpath(filepath, test_time_folder)
+            parts = rel_path.split(os.sep)
+
+
+            
+            if filepath in user_selected:  # program/config/pco/filename
+                try:
+                    df = pd.read_csv(filepath)
+                    # Add the three hierarchy columns at the front
+                    df.insert(0, "program", parts[0])
+                    df.insert(1, "config", parts[1])
+                    df.insert(2, "pco", parts[2])
+                    
+                    # Map DRV_INV columns to filter-compatible names
+                    # Use OPERATION as Category, SUB_BUILD_GROUP as SubCat for filtering
+                    if "OPERATION" in df.columns:
+                        df["Category"] = df["OPERATION"]
+                    if "SUB_BUILD_GROUP" in df.columns:
+                        df["SubCat"] = df["SUB_BUILD_GROUP"]
+                    
+                    dfs.append(df)
+                except Exception as e:
+                    st.warning(f"Could not load {filepath}: {e}")
+    
+    if dfs:
+        merged_df = pd.concat(dfs, ignore_index=True)
+        return merged_df
+    else:
+        # Fallback to example data if no DRV_INV.csv files found
+        #st.warning("No DRV_INV.csv files found. Using example data.")
+        data = {
+            "program":  ["SUMMIT"] * 4 + ["MARLIN"] * 4 + ["MARLIN"] * 4,
+            "config":   ["CMR"] * 4 + ["SMR"] * 4 + ["HSMR"] * 4,
+            "pco":      ["PYTHON_373"] * 4 + ["PCO2"] * 4 + ["PCO3"] * 4,
+            "Category": ["CatA", "CatB", "CatC", "CatA"] * 3,
+            "SubCat":   ["SC1", "SC2", "SC3", "SC4"] * 3,
+            "TEST_TIME": [10, 12, 20, 16, 9, 11, 14, 13, 8, 10, 15, 18],
+        }
+        return pd.DataFrame(data)
+      
 # -------------------------------------------------------------------
 # Load and merge all DRV_INV.csv files from folder hierarchy
 # -------------------------------------------------------------------
@@ -942,7 +1030,7 @@ def test_time_block(title, df, key_prefix, groupby_cols=None, group_by=None):
 
     
     # Order df_view OPERATION column to match the custom order
-    custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2", "Total"]
+    custom_order = config.HAMR_OPER_LIST + ['Total']
     if "OPERATION" in df_view.columns:
         df_view["OPERATION"] = pd.Categorical(df_view["OPERATION"], categories=custom_order, ordered=True)
         df_view = df_view.sort_values("OPERATION")
@@ -988,6 +1076,51 @@ def test_time_block(title, df, key_prefix, groupby_cols=None, group_by=None):
         mime="text/csv",
         key=f"{key_prefix}_download_btn"
     )
+
+    with st.expander("Track Info", expanded=False):
+
+        df_cyl_data =  load_merged_max_cyl()
+
+        # Plot MAX_CYL_DEC by STATE_NAME and GROUP_NAME
+        if not df_cyl_data.empty and "MAX_CYL_DEC" in df_cyl_data.columns:
+            df_cyl_plot = df_cyl_data.copy()
+            
+            # Ensure numeric MAX_CYL_DEC
+            df_cyl_plot['MAX_CYL_DEC'] = pd.to_numeric(df_cyl_plot['MAX_CYL_DEC'], errors='coerce')
+            df_cyl_plot = df_cyl_plot.dropna(subset=['MAX_CYL_DEC'])
+            
+            if not df_cyl_plot.empty:
+                # Display mean for each group
+                group_means = df_cyl_plot.groupby(["GROUP_NAME", "STATE_NAME"])["MAX_CYL_DEC"].mean().sort_values(ascending=False)
+                st.subheader("Mean MAX_CYL_DEC by Group")
+                
+                group_means_pivot = group_means.reset_index().pivot(index="STATE_NAME", columns="GROUP_NAME", values="MAX_CYL_DEC")
+
+                # Add ratio column
+                if len(group_means_pivot.columns) >= 2:
+                    #st.write("columns for ratio:", group_means_pivot.columns.tolist())
+                    g0_col = group_means_pivot.columns[0]
+                    g1_col = group_means_pivot.columns[1]
+                    group_means_pivot['Ratio%'] = (group_means_pivot[g0_col] - group_means_pivot[g1_col]) / group_means_pivot[g1_col] * 100
+                
+                st.dataframe(group_means_pivot, use_container_width=True)
+                
+                fig_cyl = px.box(
+                    df_cyl_plot,
+                    x="STATE_NAME",
+                    y="MAX_CYL_DEC",
+                    color="GROUP_NAME",
+                    hover_data=["program", "config", "pco"],
+                    title="MAX_CYL_DEC by State and Group"
+                )
+                fig_cyl.update_layout(
+                    yaxis_title="MAX_CYL_DEC",
+                    xaxis_title="State Name",
+                    margin=dict(l=10, r=10, t=40, b=10)
+                )
+                st.plotly_chart(fig_cyl, use_container_width=True)
+
+        pass
 
     return select_col
 
@@ -1201,7 +1334,7 @@ with st.expander("Data Filter", expanded=False):
 with st.expander("CMS Config", expanded=False):
 
     if not source_df.empty and "OPERATION" in source_df.columns and "pco" in source_df.columns and "TEST_TIME" in source_df.columns:
-        custom_order = ["SCOPY", "PRE2", "LZR", "CAL", "NTZ", "CAL2", "FNC2", "SPSC2", "CRT2", "PWT", "FIN2"]
+        custom_order = config.HAMR_OPER_LIST
         
         pivot_df = source_df.pivot_table(
             index=["OPERATION"],
@@ -1403,8 +1536,8 @@ with st.expander("Test Time Distribution", expanded=False):
                 "SN": SN,
                 "TS": TS,
                 "OPER": OPER,
-                "Test Time": Test_Time,
-                "Group_Name": Group_Name
+                "Group_Name": Group_Name,
+                "Test Time": Test_Time                
                 })
 
             violin_points_df = pd.DataFrame(violin_points_data)
@@ -1455,7 +1588,7 @@ with st.expander("Test Time By State", expanded=False):
                 if sn and ts:
                     df_state = df_state[~((df_state['SERIAL_NUM'].astype(str) == sn) & (df_state['TRANS_SEQ'].astype(str) == ts))]
 
-        c1_tt, c2_tt = st.columns(2)
+        c1_tt, c2_tt, c3_tt = st.columns(3)
         with c1_tt:
             filter_text_tt_op_tt = st.text_input(
             "Filter Text Box",
@@ -1473,7 +1606,24 @@ with st.expander("Test Time By State", expanded=False):
             key="logic_tt_test"
             
         )
+            
+        with c3_tt:
+            avg_mode = st.radio(
+            "Avg Mode",
+            ["Normal", "Weighted"],
+            horizontal=True,
+            help="Normal: Regular average | Weighted: Weighted average based on counts",
+            key="avg_mode_test"
+            
+        )
 
+        group_cols_cnt =  ["SERIAL_NUM", "TRANS_SEQ", "OPERATION", "GROUP_NAME"]
+        df_cnt = df_state.groupby(group_cols_cnt, dropna=False).agg(N=('SERIAL_NUM', 'size')).reset_index()
+        total_rows = len(df_cnt)
+        print(f"[summary] Total rows in df_cnt: {total_rows}")
+
+        group_cols_opr_cnt = ["OPERATION", "GROUP_NAME"]
+        df_opr_cnt = df_cnt.groupby(group_cols_opr_cnt, dropna=False).agg(OPER_CNT=('SERIAL_NUM', 'size')).reset_index()
 
         df_state = apply_filter(
             df_state,
@@ -1481,20 +1631,31 @@ with st.expander("Test Time By State", expanded=False):
             logic_tt,
             ["program", "config", "pco", "STATE_NAME", "OPERATION"],
         )
-        
+
+
         if not df_state.empty:
 
             # Group by state and calculate mean and count
             if "STATE_NAME" in df_state.columns and len(m_select_col) > 1:
 
+                
+                df_state = pd.merge(df_state, df_opr_cnt, on=["OPERATION", "GROUP_NAME"], how="left")
                 state_summary = df_state.pivot_table(
                     index=[ "OPERATION", "STATE_NAME"],
-                    columns=["pco"], #"program","pco", "config"
-                    values=["TestTime(hrs)", "N"],
-                    aggfunc={"TestTime(hrs)": "mean", "N": "sum"},
+                    columns=["pco",], #"program","pco", "config"
+                    values=["TestTime(hrs)", "N", 'OPER_CNT',"SERIAL_NUM"],
+                    aggfunc={"TestTime(hrs)": "mean", "N": "sum", 'OPER_CNT': 'mean', "SERIAL_NUM": "size"},
                     fill_value=0
-                ).reset_index()
+                ).reset_index() 
 
+                # st.write(state_summary.columns)
+                # st.write(state_summary)
+
+                if avg_mode == "Weighted":
+                    state_summary['TestTime(hrs)'] = (state_summary['TestTime(hrs)']  * state_summary['SERIAL_NUM']) / state_summary['OPER_CNT'].replace(0, np.nan)  # avoid division by zero
+                    state_summary['N'] = state_summary['OPER_CNT'].replace(0, np.nan).round().astype("Int64")
+
+                state_summary = state_summary.drop(columns=['OPER_CNT', 'SERIAL_NUM'])
 
                 # Flatten MultiIndex columns into readable single-level names
                 def _flatten(col):
@@ -1505,6 +1666,7 @@ with st.expander("Test Time By State", expanded=False):
                 state_summary.columns = [_flatten(c) for c in state_summary.columns]
 
                 column_order = getPCOColumnOrder()
+                
                 cols = state_summary.columns.tolist()
                 if len(column_order) == 2 and len(cols) >= 6:
                     # Reorder TestTime and N columns based on column_order
@@ -1611,6 +1773,7 @@ with st.expander("Test Time By State", expanded=False):
         )
 
         plot_graph = st.checkbox("Plot Graph", value=False)
+
 
         # Use filtered data if available
         if not df_state.empty and len(df_state) < 2500 and plot_graph:
@@ -1755,14 +1918,17 @@ with st.expander("Test Time By State", expanded=False):
                     SN = pt.get("customdata", [None, None])[0]
                     TS = pt.get("customdata", [None, None])[1]
                     OPER = pt.get("x")
+                    OPER2 = pt.get("x")
                     Test_Time = pt.get("y")
                     Group_Name = pt.get("legendgroup")
                     violin_points_data.append({
                     "SN": SN,
                     "TS": TS,
-                    color_arg: OPER,
-                    "Test Time": Test_Time,
-                    "Group_Name": Group_Name
+                    f"{color_arg}_1": OPER.split(" - ")[0] if " - " in OPER else OPER,  # extract state name if OP_STATE format
+                    "Group_Name": Group_Name,                    
+                    f"{color_arg}_2": OPER.split(" - ")[1] if " - " in OPER else OPER,  # extract state name if OP_STATE format                    
+                    "Test Time": Test_Time
+
                     })
                 violin_points_df = pd.DataFrame(violin_points_data)
                 # Set fixed width for columns in violin_points_df display
@@ -1777,6 +1943,125 @@ with st.expander("Test Time By State", expanded=False):
                 st.dataframe(violin_points_df, use_container_width=False, column_config=col_widths, height=8*32, hide_index=True)
         else:
             st.info("No filtered data available. Query data above to view distribution.")
+    
+        with st.expander("Test Time By Category", expanded=False):    # Test Time By Category
+            # Copy df_state 
+            df_raw_state = df_state.copy()
+
+            if "OPER_CNT" in df_raw_state.columns:
+                df_raw_state = df_raw_state.pivot_table(
+                    index=["OPERATION", "STATE_NAME", "GROUP_NAME", "OPER_CNT"],
+                    aggfunc={"TestTime(hrs)": "mean", "SERIAL_NUM": "size"},
+                ).reset_index() 
+
+                # force to weighted 
+                if avg_mode == "Weighted":
+                    df_raw_state['TestTime(hrs)'] = (df_raw_state['TestTime(hrs)']  * df_raw_state['SERIAL_NUM']) / df_raw_state['OPER_CNT'].replace(0, np.nan)  # avoid division by zero
+            else:
+                df_raw_state = df_raw_state.pivot_table(
+                    index=["OPERATION", "STATE_NAME", "GROUP_NAME"],
+                    aggfunc={"TestTime(hrs)": "mean", "SERIAL_NUM": "size"},
+                ).reset_index()
+            # st.write(df_raw_state)
+            st.write(test_group_folder)
+
+            df_dorado_all_state = pd.read_csv(test_group_folder)
+            join_test_group_result = pd.merge(df_raw_state, df_dorado_all_state, on=['OPERATION' , 'STATE_NAME'], how='left')
+            join_test_group_result['Test Group'] = join_test_group_result['Test Group'].fillna('UNKNOW')
+
+
+            st.write(f"Raw State {len(df_raw_state.index)} row, Dorado All State {len(df_dorado_all_state)} row, Raw State After Join {len(join_test_group_result)} row.")
+
+            # st.write(df_dorado_all_state)
+            # st.write(join_test_group_result)
+
+            # join_test_group_result = join_test_group_result.pivot_table(
+            #     index=[ "Test Group" ],
+            #     columns=["GROUP_NAME",],
+            #     values=["TestTime(hrs)", "STATE_NAME"],
+            #     aggfunc={"TestTime(hrs)": "sum", "STATE_NAME": "size"},
+            #     fill_value=0
+            # ).reset_index()
+            # st.write(join_test_group_result)
+
+            
+            df_tt_by_category = join_test_group_result.pivot_table(
+                index=["Test Group"],
+                columns=["GROUP_NAME"],
+                values=["TestTime(hrs)", "STATE_NAME"],
+                aggfunc={"TestTime(hrs)": "sum", "STATE_NAME": "size"},
+                fill_value=0,
+                sort=False
+            )
+
+
+
+            chart_ttbc = df_tt_by_category.copy()
+
+            metrics = list(dict.fromkeys(df_tt_by_category.columns.get_level_values(0)))
+            groups  = list(dict.fromkeys(df_tt_by_category.columns.get_level_values(1)))
+
+            for m in metrics:
+                df_tt_by_category[(m, "sum")] = df_tt_by_category[m].sum(axis=1)
+
+            base_groups = [g for g in groups if g != "sum"]
+            swapped_groups = base_groups[::-1]
+
+            metric_order = ["TestTime(hrs)", "STATE_NAME"]
+
+            new_cols = []
+            for m in metric_order:
+                for g in swapped_groups:
+                    new_cols.append((m, g))
+                new_cols.append((m, "sum"))
+
+            df_tt_by_category = df_tt_by_category.reindex(columns=pd.MultiIndex.from_tuples(new_cols))
+            df_tt_by_category.loc["Total"] = df_tt_by_category.sum()
+            df_tt_by_category = df_tt_by_category.reset_index()
+            st.write(df_tt_by_category)
+
+            # Download Data After join
+            df_tt_by_category_csv = df_tt_by_category.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Download Data as CSV",
+                data=df_tt_by_category_csv,
+                file_name="df_tt_by_category.csv",
+                mime="text/csv",
+                key="df_tt_by_category_download_btn"
+            )
+
+            plot_graph_ttbc = st.checkbox("Plot Graph Test Time By Category", value=False)
+
+            if plot_graph_ttbc:
+            
+                groups_order = swapped_groups
+                x_order = list(chart_ttbc.index)
+
+                # bar chart TestTime(hrs)
+                df_tt = (chart_ttbc["TestTime(hrs)"].reset_index().melt(id_vars="Test Group", var_name="GROUP_NAME", value_name="TestTime(hrs)"))
+
+                fig_tt = px.bar(
+                    df_tt,
+                    x="Test Group", y="TestTime(hrs)",
+                    color="GROUP_NAME",
+                    barmode="group",
+                    category_orders={"GROUP_NAME": groups_order, "Test Group": x_order},
+                    title="TestTime(hrs) by Test Group and GROUP_NAME"
+                )
+                st.plotly_chart(fig_tt, use_container_width=True)
+
+                # # bar chart STATE_NAME
+                # df_sn = (chart_ttbc["STATE_NAME"].reset_index().melt(id_vars="Test Group", var_name="GROUP_NAME", value_name="STATE_NAME"))
+
+                # fig_sn = px.bar(
+                #     df_sn,
+                #     x="Test Group", y="STATE_NAME",
+                #     color="GROUP_NAME",
+                #     barmode="group",
+                #     category_orders={"GROUP_NAME": groups_order, "Test Group": x_order},
+                #     title="STATE_NAME (count) by Test Group and GROUP_NAME"
+                # )
+                # st.plotly_chart(fig_sn, use_container_width=True)
 
 with st.expander("Test Time By Test", expanded=False):
     st.markdown('<div class="section-title">Test Time By Test</div>', unsafe_allow_html=True)
@@ -1786,7 +2071,7 @@ with st.expander("Test Time By Test", expanded=False):
     else:
         df_test = load_merged_test_time_by_test().copy()
 
-        c1_tt, c2_tt, c3_tt = st.columns(3)
+        c1_tt, c2_tt, c3_tt, c4_tt = st.columns(4)
         col_alias = {
             "STATE": "STATE_NAME",
             "OP": "OPERATION",
@@ -1821,6 +2106,15 @@ with st.expander("Test Time By Test", expanded=False):
             
             )
 
+        with c4_tt:
+            avg_mode_tt_op_tt = st.radio(
+            "Avg Mode",
+            ["Normal", "Weighted"],
+            horizontal=True,
+            help="Normal: Regular average | Weighted: Weighted average",
+            key="avg_mode_tt_op_tt"
+            
+            )
 
         df_test = apply_filter_flex(
             df_test,
@@ -1841,6 +2135,12 @@ with st.expander("Test Time By Test", expanded=False):
             #st.write("all operations mmm:", group_name_list)
             # column_order = getPCOColumnOrder()
             # df_test["pco"] = pd.Categorical(df_test["pco"], categories=column_order, ordered=True)
+            if avg_mode_tt_op_tt == "Weighted":
+                if "TestTime(hrs)_wgt" in df_test.columns:
+                    df_test["TestTime(hrs)"] = df_test["TestTime(hrs)_wgt"]
+                    df_test["N"] = df_test["OPER_CNT"]
+                else:
+                    st.warning("Weighted average column 'TestTime(hrs)_wgt' not found. Using unweighted 'TestTime(hrs)' instead.")
             tt_summary = df_test.pivot_table(
                     index=['TEST_NUMBER', 'PARAMETER_NAME',"STATE_NAME", "OPERATION"],
                     columns=["pco", "config"],
