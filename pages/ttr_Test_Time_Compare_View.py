@@ -2591,14 +2591,29 @@ with st.expander("Test Time By Test", expanded=False):
                     suppressRowClickSelection=False,
                 )
 
-                # csv = df_test.to_csv(index=False).encode('utf-8')
-                # st.download_button(
-                # label="Download Data as CSV",
-                # data=csv,
-                # file_name="test_time_by_test.csv",
-                # mime="text/csv",
-                # key="test_time_by_test_download_btn"
-                # )
+                # Prefer grid-returned data (after client edits/filters), fallback to source table.
+                download_df = tt_summary.copy()
+                try:
+                    if grid_response is not None:
+                        if hasattr(grid_response, "data") and isinstance(grid_response.data, pd.DataFrame):
+                            download_df = grid_response.data
+                        elif isinstance(grid_response, dict):
+                            grid_data = grid_response.get("data")
+                            if isinstance(grid_data, pd.DataFrame):
+                                download_df = grid_data
+                            elif grid_data is not None:
+                                download_df = pd.DataFrame(grid_data)
+                except Exception:
+                    download_df = tt_summary.copy()
+
+                csv = download_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="Download Grid Data as CSV",
+                    data=csv,
+                    file_name="test_time_by_test.csv",
+                    mime="text/csv",
+                    key="test_time_by_test_download_btn"
+                )
 
                 with st.expander("Test Time By Test Graph", expanded=False):
                     plot_graph_tt_by_test = st.checkbox("Plot Graph", value=False, key="plot_graph_tt_by_test")
@@ -2657,7 +2672,7 @@ with st.expander("Test Time By Test", expanded=False):
 
                             fig.update_layout(
                                             dragmode="select",  # Default to user selection mode
-                                            yaxis_title="Test Time (hours)",
+                                            yaxis_title=TestTimeCalText,
                                             xaxis_title=color_arg,
                                             yaxis_type=y_scale,
                                             legend_title=(color_arg),
