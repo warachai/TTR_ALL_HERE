@@ -257,7 +257,9 @@ with st.expander("Gui Request", expanded=True):
                 short_name = k
                 break
 
-
+        short_name = short_name.upper()
+        short_name = short_name  + "_" + site_filter
+            
         # Loop through selected configs and create a request for each
         for cfg in configs:
             attr_filter_single = attr_filter.copy()
