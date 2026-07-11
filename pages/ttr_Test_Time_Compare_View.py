@@ -25,6 +25,8 @@ from bokeh.models.widgets import Button
 from bokeh.models import CustomJS
 from bokeh.events import ButtonClick
 from streamlit_bokeh_events import streamlit_bokeh_events
+import json
+from logic.SeqgateAI_API import analyze_text
 
 st.set_page_config(page_title="Test Time View", layout="wide")
 
@@ -1730,10 +1732,11 @@ with st.expander("Test Time By Operation", expanded=False):
 # -------------------------------------------------------------------
 # Bottom: Test Time By State
 # -------------------------------------------------------------------
+state_summary = pd.DataFrame()
 with st.expander("Test Time By State", expanded=False):
-    checklist_tt_by_state = st.checkbox("Show Test Time By State", value=False)
+    #checklist_tt_by_state = st.checkbox("Show Test Time By State", value=False)
     
-    if checklist_tt_by_state:
+    if True:
         st.markdown('<div class="section-title">Test Time By State</div>', unsafe_allow_html=True)
         
         if not has_query_params:
@@ -1909,6 +1912,7 @@ with st.expander("Test Time By State", expanded=False):
                     col_widths = {col: {"width": 120, 'help': col} for col in state_summary.columns[1:6]}  # columns 1-5 (0-based, skip OPERATION)
 
                     st.dataframe(styled, use_container_width=True, column_config=col_widths, height=15*32)
+                    st.session_state["state_summary_for_ai"] = state_summary.copy()
 
                 elif m_select_col is not None and len(m_select_col) == 1 and m_select_col[0] in df_dist.columns:
                     color_arg = m_select_col[0]
@@ -1929,6 +1933,7 @@ with st.expander("Test Time By State", expanded=False):
 
                     #st.dataframe(state_summary, use_container_width=True, column_config=col_widths, height=15*32)
                     st.dataframe(state_summary, use_container_width=True, height=15*32)
+                    st.session_state["state_summary_for_ai"] = state_summary.copy()
 
                 else:
                     st.warning("The dataset does not contain a 'STATE' column.")
@@ -1943,6 +1948,10 @@ with st.expander("Test Time By State", expanded=False):
             mime="text/csv",
             key="test_time_by_state_download_btn"
             )
+
+            if isinstance(state_summary, pd.DataFrame) and not state_summary.empty:
+                #state_summary.to_csv("r:/tt_summary_debug.csv", index=False)  # Save for debugging
+                st.session_state["state_summary_for_ai"] = state_summary.copy()
 
             plot_graph = st.checkbox("Plot Graph", value=False)
 
@@ -3030,3 +3039,226 @@ with st.expander("Test Time By Test", expanded=False):
 
 # source_df = load_test_time_hist_info()
 # TestTime_Hist_block("Test Time Hist", source_df)
+
+
+
+
+def render_ai_result(result):
+
+    # -------------------------
+    # STATUS
+    # -------------------------
+
+    st.success(
+        f"Status: {result.get('status', 'N/A')} | "
+        f"Confidence: {result.get('confidence', 'N/A')}"
+    )
+
+    st.divider()
+
+    # -------------------------
+    # SUMMARY
+    # -------------------------
+
+    summary_count = len(result.get("summary", []))
+    anomaly_count = len(result.get("anomalies", []))
+
+    col1, col2 = st.columns(2)
+
+    col1.metric(
+        "Summary",
+        summary_count
+    )
+
+    col2.metric(
+        "Anomalies",
+        anomaly_count
+    )
+
+    st.divider()
+
+    # -------------------------
+    # EXECUTIVE SUMMARY
+    # -------------------------
+
+    st.subheader("📋 Executive Summary")
+
+    for item in result.get("summary", []):
+        st.markdown(f"• {item}")
+
+
+    # -------------------------
+    # ANOMALIES
+    # -------------------------
+
+    anomalies = result.get("anomalies", [])
+
+    if anomalies:
+
+        st.divider()
+
+        from logic.ai_field_mapping import normalize_list
+        findings = result.get("findings", [])
+        normalized_findings = normalize_list(
+            section="findings",
+            items=findings
+        )
+
+        anomalies = result.get("anomalies", [])
+
+        normalized_anomalies = normalize_list(
+            section="anomalies",
+            items=anomalies
+        )
+
+        if normalized_findings:
+            st.markdown("#### 🔎 Findings")
+
+        for idx, item in enumerate(normalized_findings, start=1):
+
+            with st.container(border=True):
+                op = str(item.get("operation", "N/A") or "N/A")
+                state = str(item.get("state", "N/A") or "N/A")
+                message = str(item.get("message", "") or item.get("note", ""))
+
+                c1, c2 = st.columns([3, 7])
+
+                with c1:
+                    st.markdown(f"**{idx}. {state}**")
+                    st.caption(f"{op}")
+
+                with c2:
+                    st.write(message if message else "-")
+
+        # st.write(f"Total anomalies: {len(normalized_anomalies)}")
+        # st.write(normalized_anomalies)
+        st.subheader("🚨 Anomalies")
+        for item in normalized_anomalies:
+
+            with st.container():
+
+                col1, col2 = st.columns(
+                    [2, 5]
+                )
+
+                with col1:
+                    st.markdown(f"**{item.get('difference','-')} Hrs.**")
+                    st.markdown(
+                        f"<p style='font-size:0.72rem; color:#6b7280; margin:0;'>{item.get('state','')} - {item.get('operation','')}</p>",
+                        unsafe_allow_html=True,
+                    )
+
+
+
+                with col2:
+
+                    st.write(
+                        item.get(
+                            "message",
+                            item.get(
+                                "note",
+                                ""
+                            )
+                        )
+                    )
+
+    # -------------------------
+    # RECOMMENDATIONS
+    # -------------------------
+
+    recommendations = result.get(
+        "recommendations",
+        []
+    )
+
+    if recommendations:
+
+        st.divider()
+        st.subheader("💡 Recommendations")
+
+        for rec in recommendations:
+
+            st.markdown(
+                f"✅ {rec}"
+            )
+
+# ==================================================
+# SIDEBAR
+# ==================================================
+
+with st.sidebar:
+
+    st.header("🤖 AI Analysis")
+    ai_df = st.session_state.get("state_summary_for_ai")
+    if ai_df is None or ai_df.empty:
+        st.info("No test time data available for AI analysis. Please run analysis.")
+        st.stop()
+
+
+    if st.button(
+        "Analyze",
+        use_container_width=True
+    ):
+
+        with st.spinner(
+            "Analyzing test time summary data..."
+        ):
+
+            try:
+
+                # =====================================
+                # YOUR AI CALL HERE
+                # =====================================
+
+
+                ai_name = "state_summary.csv"
+                if ai_df is None or ai_df.empty:
+                    ai_df = st.session_state.get("tt_filtered", source_df)
+                    ai_name = "tt_filtered_session.csv"
+
+                if ai_df is None or ai_df.empty:
+                    raise ValueError("No state_summary or filtered session data available for AI analysis")
+
+                result, content = analyze_text(
+                    question="What are the key insights from this test-time dataset?",
+                    data_text=ai_df.to_csv(index=False),
+                    data_name=ai_name,
+                    model="gpt-4.1-mini",
+                )
+
+                print("=== Raw API Response ===")
+                print(json.dumps(result, indent=2, ensure_ascii=False))
+
+                # render_ai_result expects the model JSON payload
+                # (status/summary/findings/...), which is in content.
+                ai_response = content
+
+                if isinstance(ai_response, str):
+                    result_json = json.loads(ai_response)
+                elif isinstance(ai_response, dict):
+                    result_json = ai_response
+                else:
+                    raise ValueError("Unsupported AI response format")
+
+                st.success(
+                    "Analysis Complete"
+                )
+
+                render_ai_result(
+                    result_json
+                )
+
+            except Exception as e:
+
+                st.error(
+                    f"AI Parse Error: {e}"
+                )
+
+                import traceback
+                st.write("".join(traceback.format_tb(e.__traceback__)))
+
+                try:
+                    pass
+                    st.code(str(ai_response))
+                except:
+                    pass
