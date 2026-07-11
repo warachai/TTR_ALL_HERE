@@ -4,8 +4,7 @@ import os
 import argparse
 from pathlib import Path
 
-#API_KEY = os.getenv("SEAGATE_GENAI_API_KEY", "S57ipZivMtC2iuDCWqdy3edIPX-MwgBH") #mmm
-API_KEY = os.getenv("SEAGATE_GENAI_API_KEY", "JvolwssXVoiyHXuHFT1IN9EM2ZYR9PRw")
+API_KEY = os.getenv("SEAGATE_GENAI_API_KEY")
 BASE_URL = os.getenv("SEAGATE_GENAI_BASE_URL", "https://genai-models.seagate.com")
 CHAT_COMPLETIONS_PATH = "/openai/v1/chat/completions"
 
@@ -192,6 +191,11 @@ def main():
         default="gpt-4.1-mini",
         help="Model name"
     )
+    parser.add_argument(
+        "--api-key",
+        default=None,
+        help="API key for Seagate GenAI (overrides SEAGATE_GENAI_API_KEY)"
+    )
     args = parser.parse_args()
 
     result, content = analyze_text(
@@ -199,6 +203,7 @@ def main():
         data_text=args.text,
         data_name=args.data_name,
         model=args.model,
+        api_key=args.api_key,
     )
 
     print(json.dumps(result, indent=2))

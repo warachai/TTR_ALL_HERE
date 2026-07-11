@@ -3,6 +3,7 @@
 # http://localhost:8501/ttr_Test_Time_Compare_View?prog_0=SUMMIT&cfg_0=CMR&pco_0=PYTHON_373&prog_1=SUMMIT&cfg_1=CMR&pco_1=PYTHON_374
 
 # Numpy compatibility shim for packages expecting np.bool8
+from http.cookies import SimpleCookie
 import numpy as np  # must run before other imports
 if not hasattr(np, "bool8"):
     np.bool8 = np.bool_
@@ -27,6 +28,12 @@ from bokeh.events import ButtonClick
 from streamlit_bokeh_events import streamlit_bokeh_events
 import json
 from logic.SeqgateAI_API import analyze_text
+from data_handling.user_manager import UserManager
+
+from logic.auth import *
+
+init_auth()
+
 
 st.set_page_config(page_title="Test Time View", layout="wide")
 
@@ -813,10 +820,45 @@ st.markdown("""
     font-size: 0.75rem;
     margin-top: 1.2rem;
 }
+.header-user {
+    text-align: right;
+    color: #4b5563;
+    font-size: 0.82rem;
+    margin-top: 0.2rem;
+}
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="program-title">Test Time View</div>', unsafe_allow_html=True)
+# Load cookie data into session_state["user"]
+def load_user_from_cookie():
+    cookie_str = os.environ.get("HTTP_COOKIE", "")
+    if cookie_str:
+        cookie = SimpleCookie()
+        cookie.load(cookie_str)
+        if "user" in cookie:
+            user_data = cookie["user"].value
+            st.session_state["user"] = eval(user_data)  # Convert string back to dictionary
+            st.write("User data loaded from cookie.")
+    return st.session_state.get("user")
+
+raw_user = load_user_from_cookie()
+if isinstance(raw_user, dict):
+    current_user = str(raw_user.get("fullname", "")).strip()
+else:
+    current_user = str(raw_user or "").strip()
+
+if not current_user:
+    current_user = "Anonymous"
+
+
+header_left, header_right = st.columns([7, 3])
+with header_left:
+    st.markdown('<div class="program-title">Test Time View</div>', unsafe_allow_html=True)
+with header_right:
+    st.markdown(
+        f'<div class="header-user">User: {current_user}</div>',
+        unsafe_allow_html=True,
+    )
 
 # Parse URL query params for pre-filling selectors (prog_0, cfg_0, pco_0, prog_1, cfg_1, pco_1, prog_2, cfg_2, pco_2)
 params = st.query_params
@@ -3189,6 +3231,16 @@ def render_ai_result(result):
 with st.sidebar:
 
     st.header("🤖 AI Analysis")
+    if current_user == "Anonymous":
+        st.warning("Anonymous user is not allowed for AI analysis.")
+        st.stop()
+    usr_mgr = UserManager()
+    user_api_key = usr_mgr.get_api_key(current_user)
+
+    if not user_api_key:
+        st.warning("No API key found for the current user. Please contact the administrator.")
+        st.stop()
+        
     ai_df = st.session_state.get("state_summary_for_ai")
     if ai_df is None or ai_df.empty:
         st.info("No test time data available for AI analysis. Please run analysis.")
@@ -3219,11 +3271,14 @@ with st.sidebar:
                 if ai_df is None or ai_df.empty:
                     raise ValueError("No state_summary or filtered session data available for AI analysis")
 
+                
+                
                 result, content = analyze_text(
                     question="What are the key insights from this test-time dataset?",
                     data_text=ai_df.to_csv(index=False),
                     data_name=ai_name,
                     model="gpt-4.1-mini",
+                    api_key=user_api_key,
                 )
 
                 print("=== Raw API Response ===")
