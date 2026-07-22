@@ -371,6 +371,23 @@ def main_():
         traceback.print_exc()
         return 1
 
+def selectLastestWWFile():
+    """
+    Select the latest WW CSV file in the current directory based on naming convention.
+    
+    Returns:
+        str: Path to the latest WW CSV file or None if not found.
+    """
+    import re
+    from datetime import datetime
+
+    ww_files = [f for f in os.listdir('.') if re.match(r'WW\d{4}\.csv', f)]
+    if not ww_files:
+        return None
+
+    # Sort files by the number in their name (assuming WWXXXX)
+    ww_files.sort(key=lambda x: int(re.search(r'WW(\d{4})\.csv', x).group(1)), reverse=True)
+    return ww_files[0]
 
 def main():
     """
@@ -381,7 +398,7 @@ def main():
     # Define file paths
     script_dir = os.path.dirname(os.path.abspath(__file__))
     jira_file = os.path.join(script_dir, 'jira_issues.csv')
-    ww_file = os.path.join(script_dir, 'WW2619.csv')
+    ww_file = os.path.join(script_dir, selectLastestWWFile())
     output_file = os.path.join(script_dir, 'merged_issues.csv')
     
     # Define program name mapping

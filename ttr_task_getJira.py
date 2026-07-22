@@ -25,15 +25,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
+import pandas as pd
 
-# ==============================================================================
-# CONSTANTS - FTP CONFIGURATION
+
 # ==============================================================================
 FTP_HOST = '10.19.67.204'
 FTP_PATH = '/var/merlin/cfgs/Siyarat/DISC'
 FTP_USERNAME = 'merlin'
 FTP_PASSWORD = 'merlin'
-FTP_LOCAL_DIR = r'D:\work\project\project\Github\TTR_ALL_HERE\RawData'
+FTP_LOCAL_DIR = r'D:\work\project\project\Github\TTR_ALL_HERE\RAW\DISC'
 
 
 # ==============================================================================
@@ -41,10 +41,12 @@ FTP_LOCAL_DIR = r'D:\work\project\project\Github\TTR_ALL_HERE\RawData'
 # ==============================================================================
 JIRA_BASE_URL = 'https://jira.seagate.com'
 JIRA_API_ENDPOINT = '/jira/rest/api/2/search'
-JIRA_PROJECTS = ['SUMMIT', 'MARLINCT', 'MBP', 'DORADO', 'TSR']
+#JIRA_PROJECTS = ['SUMMIT', 'MARLINCT', 'MBP', 'DORADO', 'TSR']
+JIRA_PROJECTS = ['DORADO',]
+
 JIRA_FIELDS = 'key,summary,status,reporter,created,customfield_35600'
 JIRA_MAX_RESULTS = 50
-JIRA_OUTPUT_FILE = r'D:\work\project\project\Github\TTR_ALL_HERE\RawData\jira_issues.csv'
+JIRA_OUTPUT_FILE = r'D:\work\project\project\Github\TTR_ALL_HERE\RAW\JIRA\jira_issues.csv'
 
 
 # ==============================================================================
@@ -107,7 +109,7 @@ def download_ftp_files(ftp_host=FTP_HOST, ftp_path=FTP_PATH,
 # ==============================================================================
 # JIRA FUNCTIONS
 # ==============================================================================
-def construct_jira_url(base_url, endpoint, project):
+def construct_jira_url(base_url, endpoint, project, start_at=0,batch_size = JIRA_MAX_RESULTS):
     """
     Constructs a Jira REST API URL with the given base URL, endpoint, and project.
 
@@ -119,12 +121,13 @@ def construct_jira_url(base_url, endpoint, project):
     Returns:
         str: The constructed URL.
     """
-    jql_query = f"project={project} ORDER BY created DESC"
+    jql_query = f"project={project} ORDER BY created ASC"
     
     query_params = {
         "jql": jql_query,
+        "startAt": start_at,
         "fields": JIRA_FIELDS,
-        "maxResults": JIRA_MAX_RESULTS
+        "maxResults": batch_size
     }
     return f"{base_url}{endpoint}?{urlencode(query_params)}"
 
@@ -149,54 +152,89 @@ def find_keys(d, target):
     return keys
 
 
+
 def handle_rest_api_result(project, driver):
-    """
-    Handles the REST API result fetched via Selenium by processing 
-    the JSON response and saving it to a CSV file.
+    """Process the REST API JSON response and append to Jira CSV using pandas.
+
+    Duplicates (by Key) within the current fetched batch are dropped keeping the latest
+    representation (last occurrence). This does not de-duplicate existing rows already
+    written to disk; it only cleans the in-memory batch before appending.
 
     Args:
-        project (str): The project name being processed.
-        driver (webdriver): The Selenium WebDriver instance.
+        project: Jira project key
+        driver: Selenium WebDriver instance
+    Returns:
+        int: Number of issues processed after de-duplication
     """
+    total_issues = 0
     try:
-        # Get the page source (JSON response)
         page_source = driver.find_element("tag name", "pre").text
-
-        # Parse the JSON response
         data = json.loads(page_source)
-        print(f"Total issues for {project}: {data.get('total')}\n")
+        raw_issues = data.get("issues", [])
+        total_issues = len(raw_issues)
+        print(f"Total issues returned for {project}: {data.get('total')} (raw count {len(raw_issues)})\n")
 
-        # Prepare data for CSV
-        csv_data = []
-
-        for issue in data.get("issues", []):
+        # Build list of dict rows
+        rows = []
+        for issue in raw_issues:
             try:
-                key = issue["key"]
-                fields = issue["fields"]
-                summary = fields.get("summary", "No Summary")
-                status = fields.get("status", {}).get("name", "No Status")
-                assignee = fields.get("assignee", {}).get("displayName", "Unassigned")
-                created = fields.get("created", "No Created Date")
-                custom_field_value = fields.get("customfield_35600", [{}])[0].get("value", "Others") if fields.get("customfield_35600") else "Others"
-
-                csv_data.append([project, key, status, assignee, created, summary, custom_field_value])
+                fields = issue.get("fields", {})
+                rows.append({
+                    "Project": project,
+                    "Key": issue.get("key"),
+                    "Status": fields.get("status", {}).get("name", "No Status"),
+                    "Reporter": fields.get("assignee", {}).get("displayName", "Unassigned"),
+                    "Created": fields.get("created", "No Created Date"),
+                    "Summary": fields.get("summary", "No Summary"),
+                    "Improvement Type": (fields.get("customfield_35600", [{}])[0].get("value", "Others")
+                                          if fields.get("customfield_35600") else "Others")
+                })
             except Exception as e:
                 print(f"Error processing issue: {e}")
 
-        # Determine write mode (create or append)
-        write_headers = not os.path.exists(JIRA_OUTPUT_FILE)
+        # Convert to DataFrame and drop intra-batch duplicates by Key (keep last)
+        batch_df = pd.DataFrame(rows, columns=CSV_HEADERS)
+        intra_before = len(batch_df)
+        if not batch_df.empty:
+            batch_df = batch_df.drop_duplicates(subset=["Key"], keep="last")
+        intra_after = len(batch_df)
+        if intra_before != intra_after:
+            print(f"Dropped {intra_before - intra_after} duplicate rows inside current batch for project {project}.")
 
-        # Write or append data to CSV
-        with open(JIRA_OUTPUT_FILE, "a" if not write_headers else "w", newline="", encoding="utf-8") as csvfile:
-            writer = csv.writer(csvfile)
-            if write_headers:
-                writer.writerow(CSV_HEADERS)
-            writer.writerows(csv_data)
+        # Combine with existing file (if present) and perform full dedupe
+        if os.path.exists(JIRA_OUTPUT_FILE):
+            try:
+                existing_df = pd.read_csv(JIRA_OUTPUT_FILE, encoding="utf-8")
+                # Ensure columns alignment
+                missing_cols = [c for c in CSV_HEADERS if c not in existing_df.columns]
+                if missing_cols:
+                    for mc in missing_cols:
+                        existing_df[mc] = None
+                combined_df = pd.concat([existing_df[CSV_HEADERS], batch_df], ignore_index=True)
+                full_before = len(combined_df)
+                combined_df = combined_df.drop_duplicates(subset=["Key"], keep="last")
+                full_after = len(combined_df)
+                if full_before != full_after:
+                    print(f"Dropped {full_before - full_after} duplicate rows after merging with existing file for project {project}.")
+                combined_df.to_csv(JIRA_OUTPUT_FILE, index=False, encoding="utf-8")
+                new_unique = full_after - len(existing_df.drop_duplicates(subset=["Key"], keep="last"))
+                print(f"Data for {project} merged & saved to {JIRA_OUTPUT_FILE} (new unique rows added: {new_unique}, total rows: {full_after}).\n")
 
-        print(f"Data for {project} saved to {JIRA_OUTPUT_FILE}\n")
+            except Exception as e:
+                print(f"Failed reading existing Jira file, rewriting fresh. Reason: {e}")
+                batch_df.to_csv(JIRA_OUTPUT_FILE, index=False, encoding="utf-8")
+                print(f"Data for {project} saved fresh to {JIRA_OUTPUT_FILE} (rows written: {len(batch_df)})\n")
+
+        else:
+            # First write
+            batch_df.to_csv(JIRA_OUTPUT_FILE, index=False, encoding="utf-8")
+            print(f"Data for {project} saved to new file {JIRA_OUTPUT_FILE} (rows written: {len(batch_df)})\n")
+
     except Exception as e:
         print(f"Error handling REST API result for {project}: {e}")
-
+        return 0
+    
+    return total_issues
 
 def setup_chrome_driver():
     """
@@ -217,7 +255,7 @@ def setup_chrome_driver():
     return driver
 
 
-def scrape_jira_issues():
+def get_jira_issues():
     """
     Scrape Jira issues for all configured projects and save to CSV.
     """
@@ -230,13 +268,19 @@ def scrape_jira_issues():
         time.sleep(10)
         
         # Process each project
+        start_index = 0
+        batch_size = 100
         for project in JIRA_PROJECTS:
             print(f"Processing project: {project}")
-            query_url = construct_jira_url(JIRA_BASE_URL, JIRA_API_ENDPOINT, project)
-            driver.get(query_url)
-            time.sleep(10)
-            handle_rest_api_result(project, driver)
-            time.sleep(5)
+            while True:
+                query_url = construct_jira_url(JIRA_BASE_URL, JIRA_API_ENDPOINT, project,start_at=start_index,batch_size = batch_size)
+                driver.get(query_url)
+                time.sleep(10)
+                total_issues = handle_rest_api_result(project, driver)
+                if total_issues < batch_size:
+                    break
+                start_index += batch_size
+                time.sleep(5)
     
     finally:
         driver.quit()
@@ -248,24 +292,13 @@ def scrape_jira_issues():
 # ==============================================================================
 def main():
     """
-    Main function to orchestrate FTP download and Jira scraping.
+    Main function to get Jira scraping.
     """
-    print("=" * 80)
-    print("TTR Data Processor - Starting")
-    print("=" * 80)
-    
-    # Step 1: Download FTP files
-    print("\n[1/2] Downloading DISC files from FTP...")
-    try:
-        download_ftp_files()
-        print("FTP download completed successfully.")
-    except Exception as e:
-        print(f"Error during FTP download: {e}")
-    
+
     # Step 2: Scrape Jira issues
-    print("\n[2/2] Scraping Jira issues...")
+    print("\n Scraping Jira issues...")
     try:
-        scrape_jira_issues()
+        get_jira_issues()
         print("Jira scraping completed successfully.")
     except Exception as e:
         print(f"Error during Jira scraping: {e}")

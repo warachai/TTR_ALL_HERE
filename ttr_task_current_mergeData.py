@@ -9,6 +9,8 @@ and adding a source identifier column to track the origin of each row.
 import csv
 import os
 import pandas as pd
+from datetime import datetime
+import config
 
 
 def read_excel_file(excel_file, sheet_name, column_map, source_name, start_row=1, program_name=''):
@@ -69,7 +71,7 @@ def read_excel_file(excel_file, sheet_name, column_map, source_name, start_row=1
         
         # Define output fieldnames
         output_fieldnames = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 
-                           'Date_Time', 'Task_Name', 'Improvement_Type']
+                           'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN', 'FixVersions']
         
         merged_data = []
         
@@ -155,8 +157,8 @@ def merge_csv_files(jira_file, ww_file, output_file):
     merged_data = []
     
     # Define output columns (unified schema)
-    # Source, Program, Task_ID, Status, User_Name, Date_Time, Task_Name, Improvement_Type
-    fieldnames = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type']
+    # Source, Program, Task_ID, Status, User_Name, Date_Time, Task_Name, Improvement_Type, GAIN
+    fieldnames = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN', 'FixVersions']
     
     # Read from jira_issues.csv
     # Columns: Project, Key, Status, Assignee, Created, Summary, Improvement Type
@@ -173,7 +175,8 @@ def merge_csv_files(jira_file, ww_file, output_file):
                 'User_Name': row.get('Assignee', ''),
                 'Date_Time': row.get('Created', ''),
                 'Task_Name': row.get('Summary', ''),
-                'Improvement_Type': row.get('Improvement Type', '')
+                'Improvement_Type': row.get('Improvement Type', ''),
+                'FixVersions': row.get('FixVersions', '')
             })
             jira_count += 1
         print(f"  Found {jira_count} rows from jira_issues.csv")
@@ -193,13 +196,21 @@ def merge_csv_files(jira_file, ww_file, output_file):
                 'User_Name': row.get('user_name', ''),
                 'Date_Time': row.get('date_time_req', ''),
                 'Task_Name': row.get('task_name', ''),
-                'Improvement_Type': row.get('improvement_type', '')
+                'Improvement_Type': row.get('improvement_type', ''),
+                'FixVersions': row.get('fixversions', '')
             })
             ww_count += 1
         print(f"  Found {ww_count} rows from WW2619.csv")
     
     # Write merged data to output file
     print(f"\nWriting merged data to {output_file}...")
+    
+    # Create output directory if it doesn't exist
+    output_dir = os.path.dirname(output_file)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"  Created output directory: {output_dir}")
+    
     with open(output_file, 'w', encoding='utf-8', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -253,7 +264,7 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
         program_name_map = {}
     
     # Define output columns (unified schema)
-    fieldnames = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type']
+    fieldnames = ['Source', 'Program', 'Task_ID', 'Status', 'User_Name', 'Date_Time', 'Task_Name', 'Improvement_Type', 'GAIN', 'FixVersions']
     
     # Read from jira_issues.csv
     if os.path.exists(jira_file):
@@ -265,6 +276,9 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
                 program_name = row.get('Project', '')
                 # Apply program name mapping
                 program_name = program_name_map.get(program_name, program_name)
+
+                if row.get('Key', '') == 'MARLINCT-2337':
+                    print(f"Processing JIRA row: Program='{program_name}', Key='{row.get('Key', '')}', FixVersions='{row.get('Fix Version', '')}'")
                 
                 merged_data.append({
                     'Source': 'jira_issues',
@@ -274,7 +288,8 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
                     'User_Name': row.get('Assignee', ''),
                     'Date_Time': row.get('Created', ''),
                     'Task_Name': row.get('Summary', ''),
-                    'Improvement_Type': row.get('Improvement Type', '')
+                    'Improvement_Type': row.get('Improvement Type', ''),
+                    'FixVersions': row.get('Fix Version', '')
                 })
                 jira_count += 1
             print(f"  Found {jira_count} rows from jira_issues.csv")
@@ -282,7 +297,7 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
         print(f"Skipping {jira_file} (not found)")
         jira_count = 0
     
-    # Read from WW2619.csv
+    # Read latest DISC from WW CSV file
     if os.path.exists(ww_file):
         print(f"Reading {ww_file}...")
         with open(ww_file, 'r', encoding='utf-8') as f:
@@ -294,17 +309,18 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
                 program_name = program_name_map.get(program_name, program_name)
                 
                 merged_data.append({
-                    'Source': 'WW2619',
+                    'Source': 'DISC',
                     'Program': program_name,
                     'Task_ID': row.get('task_id', ''),
                     'Status': row.get('status_name', ''),
                     'User_Name': row.get('user_name', ''),
                     'Date_Time': row.get('date_time_req', ''),
                     'Task_Name': row.get('task_name', ''),
-                    'Improvement_Type': row.get('improvement_type', '')
+                    'Improvement_Type': row.get('improvement_type', ''),
+                    'FixVersions': row.get('FixVersions', '')                    
                 })
                 ww_count += 1
-            print(f"  Found {ww_count} rows from WW2619.csv")
+            print(f"  Found {ww_count} rows from {ww_file}")
     else:
         print(f"Skipping {ww_file} (not found)")
         ww_count = 0
@@ -314,12 +330,12 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
     if excel_files:
         for excel_config in excel_files:
             excel_data = read_excel_file(
-                excel_file=excel_config.get('file'),
-                sheet_name=excel_config.get('sheet'),
-                column_map=excel_config.get('column_map', {}),
-                source_name=excel_config.get('source_name', 'excel'),
-                start_row=excel_config.get('start_row', 1),
-                program_name=excel_config.get('program_name', '')
+                excel_file=excel_files[excel_config][0].get('file'),
+                sheet_name=excel_files[excel_config][0].get('sheet'),
+                column_map=excel_files[excel_config][0].get('column_map', {}),
+                source_name=excel_files[excel_config][0].get('source_name', 'excel'),
+                start_row=excel_files[excel_config][0].get('start_row', 1),
+                program_name=excel_files[excel_config][0].get('program_name', '')
             )
             
             # Apply program name mapping to Excel data
@@ -332,6 +348,13 @@ def merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_n
     
     # Write merged data to output file
     print(f"\nWriting merged data to {output_file}...")
+    
+    # Create output directory if it doesn't exist
+    output_dir = os.path.dirname(output_file)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"  Created output directory: {output_dir}")
+    
     with open(output_file, 'w', encoding='utf-8', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -371,81 +394,44 @@ def main_():
         traceback.print_exc()
         return 1
 
+def selectLastestWWFile(script_dir):
+    """
+    Select the latest WW CSV file in the current directory based on naming convention.
+    
+    Returns:
+        str: Path to the latest WW CSV file or None if not found.
+    """
+    import re
+    from datetime import datetime
+
+    ww_files = [f for f in os.listdir(script_dir+r"\RAW\DISC") if re.match(r'WW\d{4}\.csv', f)]
+    if not ww_files:
+        return None
+
+    # Sort files by the number in their name (assuming WWXXXX)
+    ww_files.sort(key=lambda x: int(re.search(r'WW(\d{4})\.csv', x).group(1)), reverse=True)
+    return ww_files[0]
+
 
 def main():
     """
     Main function to execute the CSV merge with Excel file support.
     
-    Example usage of merge_csv_with_excel with Excel files.
+    Uses configuration from config.py for all settings.
     """
-    # Define file paths
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    jira_file = os.path.join(script_dir, 'jira_issues.csv')
-    ww_file = os.path.join(script_dir, 'WW2619.csv')
-    output_file = os.path.join(script_dir, 'merged_issues.csv')
+    # Get file paths from config
+    script_dir = config.BASE_DIR
+    jira_file = config.JIRA_FILE_PATH
+    ww_file = os.path.join(config.RAW_DISC_DIR, selectLastestWWFile(script_dir))
+    output_file = config.MERGED_OUTPUT_PATH
     
-    # Define program name mapping
-    program_name_map = {
-        'MBP': 'MARLIN BP',
-        'MARLINCT': 'MARLIN'
-    }
+    # Get program name mapping from config
+    program_name_map = config.PROGRAM_NAME_MAP
     
-    # Example: Configure Excel files to import
-    excel_files = [
-        {
-            'file': os.path.join(script_dir, "TTR list review Q1'26 (7).xlsx"),
-            'sheet': 'MarlinBP FW2620 working',
-            'column_map': {
-                'G': 'Task_ID',           # Column G -> Task_ID
-                'H': 'Status',            # Column H -> Status
-                'D': 'User_Name',         # Column D -> User_Name
-                'C': 'Task_Name',         # Column C -> Task_Name
-            },
-            'source_name': 'excel_import',
-            'program_name': 'MBP',
-            'start_row': 78  # Start reading from row 78
-        },
-        {
-            'file': os.path.join(script_dir, "TTR list review Q1'26 (7).xlsx"),
-            'sheet': 'Marlin WW18',  # Change to your second sheet name
-            'column_map': {
-                'H': 'Task_ID',
-                'I': 'Status',
-                'F': 'User_Name',
-                'D': 'Task_Name',
-            },
-            'source_name': 'excel_import',
-            'program_name': 'MARLIN',  # This will be mapped to 'MARLIN'
-            'start_row': 66  # Adjust start row as needed
-        },
-        {
-            'file': os.path.join(script_dir, "TTR list review Q1'26 (7).xlsx"),
-            'sheet': 'Summit FW2614-20',  # Change to your third sheet name
-            'column_map': {
-                'J': 'Task_ID',
-                'K': 'Status',
-                'I': 'User_Name',
-                'D': 'Task_Name',
-            },
-            'source_name': 'excel_import',
-            'program_name': 'SUMMIT',  # Add to program_name_map if mapping needed
-            'start_row': 39  # Adjust start row as needed
-        },
-        {
-            'file': os.path.join(script_dir, "TTR list review Q1'26 (7).xlsx"),
-            'sheet': 'Dorado WW18 Working',  # Change to your third sheet name
-            'column_map': {
-                'E': 'Task_ID',
-                'F': 'Status',
-                'C': 'User_Name',
-                'B': 'Task_Name',
-            },
-            'source_name': 'excel_import',
-            'program_name': 'DORADO',  # Add to program_name_map if mapping needed
-            'start_row': 47  # Adjust start row as needed
-        }
-    ]
-    
+    # Get Excel files configuration from config
+    excel_files = config.get_excel_files_config()
+    #excel_files = None
+
     # Perform the merge with Excel files
     try:
         merge_csv_with_excel(jira_file, ww_file, excel_files, output_file, program_name_map)
@@ -459,4 +445,4 @@ def main():
 
 
 if __name__ == '__main__':
-    exit(main())
+    main()
